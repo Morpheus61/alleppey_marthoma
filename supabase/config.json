@@ -1,0 +1,34 @@
+{
+  "id": "nsuxmlbrehmqdwogkjwr",
+  "project_id": "nsuxmlbrehmqdwogkjwr",
+  "db": {
+    "port": 54322,
+    "shadow_port": 54320,
+    "major_version": 15
+  },
+  "api": {
+    "port": 54321,
+    "extra_search_path": ["public", "extensions"]
+  },
+  "studio": {
+    "port": 54323
+  },
+  "storage": {
+    "file_size_limit": "50MiB"
+  },
+  "auth": {
+    "site_url": "http://localhost:3000",
+    "additional_redirect_urls": ["https://alleppey-marthoma.vercel.app"],
+    "jwt_expiry": 3600,
+    "enable_refresh_token_rotation": true,
+    "enable_signup": true,
+    "enable_anonymous_sign_ins": false,
+    "phone": {
+      "enable_signup": true,
+      "enable_confirmations": true,
+      "otp_length": 6,
+      "otp_expiry": 600,
+      "template": "Your St. George Marthoma Church OTP is {{ .Token }}. Valid for 10 minutes."
+    }
+  }
+}
