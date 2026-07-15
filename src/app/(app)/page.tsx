@@ -80,7 +80,9 @@ export default async function HomePage() {
                 {a.is_pinned && <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1">📌 Pinned</p>}
                 {a.title && <p className="font-semibold text-sm text-brand-900">{a.title}</p>}
                 <p className="text-sm text-gray-700 mt-0.5 line-clamp-3">{a.body}</p>
-                <p className="text-[10px] text-muted-foreground mt-2">{format(new Date(a.created_at), 'd MMM yyyy')}</p>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {a.created_at ? format(new Date(a.created_at), 'd MMM yyyy') : ''}
+                </p>
               </div>
             ))}
           </div>
@@ -105,7 +107,9 @@ export default async function HomePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">{e.title}</p>
-                  <p className="text-xs text-muted-foreground">{format(new Date(e.starts_at), 'h:mm a')}{e.venue ? ` · ${e.venue}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {e.starts_at ? format(new Date(e.starts_at), 'h:mm a') : ''}{e.venue ? ` · ${e.venue}` : ''}
+                  </p>
                 </div>
               </div>
             ))}

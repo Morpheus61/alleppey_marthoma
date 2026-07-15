@@ -59,7 +59,7 @@ export default async function ProfilePage() {
         <MemberForm
           profile={profile}
           action={updateMyProfile}
-          onPhotoUpload={async (type, url) => updateMyPhoto(type, url)}
+          onPhotoUpload={updateMyPhoto}
         />
       </section>
 
