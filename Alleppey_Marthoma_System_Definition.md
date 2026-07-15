@@ -193,7 +193,7 @@ VAPID_PRIVATE_KEY=                        # server-only
 CRON_SECRET=                              # generate: openssl rand -hex 32
 
 # ── SMS OTP (2Factor.in) ───────────────────────────────────
-TWOFACTOR_API_KEY=b5bb5cd6-f04a-11f0-a6b2-0200cd936042  # ✅ SET
+TWOFACTOR_API_KEY=<rotated — see .env.local>              # ⚠ KEY ROTATED — original exposed in doc; rotate in 2Factor dashboard before next use
 TWOFACTOR_TEMPLATE_NAME=                  # ⚠ Awaiting DLT approval
 ```
 
@@ -576,8 +576,8 @@ All routes confirmed built and compiled clean as of Stage 1.
 | `/auth/login` | Client Component | No | Phone OTP login form |
 | `/auth/pending` | Server | Pending user | Awaiting approval screen |
 | `/auth/disabled` | Server | Disabled user | Account disabled screen |
-| `/groups` | Server | No | Public groups directory |
-| `/groups/[slug]` | Server | No | Public group page (description, leaders, events) |
+| `/groups` | Server | Authenticated | Groups directory (members-only; non-members redirected to login) |
+| `/groups/[slug]` | Server | Authenticated | Group page (members-only; description, leaders, events) |
 | `/groups/[slug]/feed` | Server | Active member | Member-only post feed |
 | `/groups/[slug]/calendar` | — | — | *(Stage 3 — not yet built)* |
 | `/calendar` | Server | Authenticated | Combined parish calendar (public events) |
@@ -592,6 +592,8 @@ Matches: all paths EXCEPT:
   _next/static, _next/image, favicon.ico, icons/,
   fonts/, manifest.json, sw.js, workbox-*, api/cron
 ```
+
+> **Routing decision (2026-07-15):** `/groups` and `/groups/[slug]` are **members-only**. They have been removed from the middleware's `PUBLIC_PATHS` list. Unauthenticated visitors are redirected to `/auth/login`. Opening them to public outreach in a future stage is easy; walking back a broken promise to the parish is not. If public outreach is desired later, add an anon-read RLS policy on `groups` and public `posts`/`events` at the same time.
 
 ---
 
@@ -844,12 +846,22 @@ Route protected by `Authorization: Bearer {CRON_SECRET}` header.
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "crons": [
-    { "path": "/api/cron/reminders", "schedule": "*/15 * * * *" }
-  ]
+  "installCommand": "npm install"
 }
 ```
+
+> **No `crons` key.** Vercel Hobby limits cron schedules to once per day; `*/15 * * * *` would fail deployment. Scheduling has been moved to **Supabase pg_cron** (see migration 006 below).
+
+### Reminder Cron — Supabase pg_cron (migration 006)
+Migration `006_pg_cron_reminders.sql` enables `pg_cron` and `pg_net` and schedules a job named `event-reminders` that fires `*/15 * * * *`. It uses `net.http_post()` to call `/api/cron/reminders` with `Authorization: Bearer <CRON_SECRET>`. The Next.js route handles both GET and POST.
+
+**Migration contains placeholders** (`__APP_URL__`, `__CRON_SECRET__`) — **run it manually in the Supabase SQL Editor with real values substituted. Do not commit real values.**
+
+Once the parish custom domain is live, re-run the schedule with the new URL.
+
+**Monitor runs:**
+- Supabase Dashboard → Integrations → Cron
+- Or: `select * from cron.job_run_details order by start_time desc limit 20;`
 
 ### Required Vercel Environment Variables
 Set in Vercel Dashboard → Project → Settings → Environment Variables:
@@ -951,17 +963,25 @@ npx playwright test  # Run E2E tests
 
 | Priority | Action | Owner | Notes |
 |---|---|---|---|
+| 🔴 **Critical** | **Rotate 2Factor API key** — original was printed in this doc and is burned | Dev | Log in to app.2factor.in, revoke old key, generate new one, update `.env.local` and Vercel |
 | 🔴 **Critical** | Run migrations 001–005 in Supabase SQL Editor | Dev | Required before any testing |
 | 🔴 **Critical** | Set `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` | Dev | Required for admin operations |
 | 🔴 **Critical** | DLT header + template registration (India) | Church/Dev | Vilpower registration, ~5 working days |
+| 🔴 **Critical** | Consider making GitHub repo **private** | Dev | Public repo + documented credentials = exposure risk; Vercel Hobby deploys private repos fine |
+| 🟡 **High** | Regenerate Supabase TypeScript types | Dev | First command of Stage 4: `npx supabase gen types typescript --project-id nsuxmlbrehmqdwogkjwr > src/types/database.ts` |
+| 🟡 **High** | Add `push_subscriptions` unique constraint | Dev/Stage 8 | Prevents double-notifications on re-subscribe: `UNIQUE (user_id, (subscription->>'endpoint'))` — add as migration 006 |
+| 🟡 **High** | Add soft-delete to `events` table | Dev/Stage 5 | Add `is_deleted boolean DEFAULT false NOT NULL` + `deleted_at timestamptz` — same undo-toast requirement as posts; add as migration 006 |
 | 🟡 **High** | Set `TWOFACTOR_TEMPLATE_NAME` once DLT approved | Dev | Unblock production SMS OTP |
-| 🟡 **High** | Generate VAPID keys, set in `.env.local` | Dev | `npx web-push generate-vapid-keys` |
-| 🟡 **High** | Generate `CRON_SECRET`, set in `.env.local` | Dev | `openssl rand -hex 32` |
-| 🟡 **High** | Regenerate Supabase TypeScript types | Dev | After migrations applied |
-| 🟡 **High** | Upload PWA icons (192×192, 512×512, maskable) | Dev | Use church shield logo from `/public/brand/` |
+| 🟡 **High** | Generate VAPID keys, set in `.env.local` | Dev | ✅ Done — keys generated 2026-07-14 |
+| 🟡 **High** | Generate `CRON_SECRET`, set in `.env.local` | Dev | ✅ Done — generated 2026-07-14 |
+| 🟡 **High** | Upload PWA icons to `/public/icons/` | Dev | Drop in icon-192x192.png, icon-512x512.png, icon-maskable-512x512.png, apple-touch-icon.png (180×180) |
+| 🟢 **Medium** | Enable Supabase Realtime publication (Stage 6) | Dev | Dashboard → Database → Replication → enable `posts` and `comments` tables before Stage 6 realtime work |
+| 🟢 **Medium** | Handle `post-images` signed URLs (Stage 6) | Dev | `post-images` is a **private** bucket — feeds must call `supabase.storage.from('post-images').createSignedUrl()`, never public URLs |
+| � **Critical** | Run migration 006 manually in Supabase SQL Editor | Dev | Substitute `__APP_URL__` (your `.vercel.app` URL) and `__CRON_SECRET__` before running. Re-run with parish domain once it is live. Never commit real values. |
+| �🟢 **Medium** | Recurring events + cron (Stage 8) | Dev | The reminder cron scans `starts_at` only. A weekly event has one static `starts_at` + an `rrule`. Stage 8 must expand upcoming occurrences via the `rrule` lib before scanning, or recurring-event reminders fire once and stop |
 | 🟢 **Medium** | Set Vercel environment variables | Dev | Before first Vercel deploy |
 | 🟢 **Medium** | Upgrade Node.js to 22 LTS in Vercel settings | Dev | Suppress Supabase deprecation warning |
-| 🟢 **Medium** | Download + bundle Noto Sans Malayalam WOFF2 | Dev/Stage 7 | `npx supabase gen types` also needed |
+| 🟢 **Medium** | Download + bundle Noto Sans Malayalam WOFF2 | Dev/Stage 7 | Replace CDN `<link>` with `next/font/local` |
 | 🟢 **Low** | Delete `C:\Users\user\package-lock.json` | Dev | Removes workspace root warning |
 
 ---

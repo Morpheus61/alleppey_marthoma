@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/auth/login', '/auth/pending', '/auth/disabled', '/groups']
+const PUBLIC_PATHS = ['/auth/login', '/auth/pending', '/auth/disabled']
 
 export async function proxy(request: NextRequest) {
   // IMPORTANT: create a mutable response so cookie mutations propagate

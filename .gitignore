@@ -12,6 +12,9 @@ dist/
 .env.local
 .env.*.local
 
+# Migration files containing real secrets (run manually in Supabase SQL Editor)
+supabase/migrations/*.local.sql
+
 # Service worker build artifacts
 public/workbox-*.js
 public/sw.js
