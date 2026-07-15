@@ -79,7 +79,6 @@ export interface Database {
           is_mobile_whatsapp?: boolean
           email?: string | null
           family_members?: FamilyMember[]
-          family_photo_url?: string | null
         }
       }
       groups: {
