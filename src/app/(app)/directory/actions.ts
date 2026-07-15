@@ -85,3 +85,50 @@ export async function importDirectory(formData: FormData) {
   revalidatePath('/admin')
   return { imported: records.length }
 }
+
+/* ── Add Single Member ────────────────────────── */
+
+export async function addMember(formData: FormData) {
+  const supabase = await requireAdmin()
+
+  const full_name    = (formData.get('full_name')    as string).trim()
+  const full_name_ml = (formData.get('full_name_ml') as string | null)?.trim() || null
+  const phone_raw    = (formData.get('phone')        as string).replace(/\D/g, '')
+  const phone        = phone_raw.startsWith('91') && phone_raw.length === 12
+    ? phone_raw.slice(2) : phone_raw
+  const house_name   = (formData.get('house_name')   as string | null)?.trim() || null
+  const status       = (formData.get('status')       as 'active' | 'pending') || 'active'
+
+  if (!full_name)          return { error: 'Full name is required.' }
+  if (phone.length !== 10) return { error: 'Enter a valid 10-digit mobile number.' }
+
+  const { error } = await supabase.from('profiles').upsert(
+    { full_name, full_name_ml, phone, house_name, status, is_admin: false },
+    { onConflict: 'phone', ignoreDuplicates: false },
+  )
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/directory')
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+/* ── Disable Member (soft-delete) ─────────────── */
+
+export async function disableMember(id: string) {
+  const supabase = await requireAdmin()
+  await supabase.from('profiles').update({ status: 'disabled' }).eq('id', id)
+  revalidatePath('/directory')
+  revalidatePath('/admin')
+}
+
+/* ── Re-activate Member ───────────────────────── */
+
+export async function reactivateMember(id: string) {
+  const supabase = await requireAdmin()
+  await supabase.from('profiles').update({ status: 'active' }).eq('id', id)
+  revalidatePath('/directory')
+  revalidatePath('/admin')
+}
+

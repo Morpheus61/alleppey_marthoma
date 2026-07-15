@@ -97,3 +97,47 @@ export async function revokeLeader(groupId: string, userId: string) {
     .eq('user_id', userId)
   revalidatePath(`/manage/${groupId}`)
 }
+
+/* ── Update Group Info ────────────────────────── */
+
+export async function updateGroupInfo(groupId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  const isAdmin = profile?.is_admin ?? false
+
+  const { data: membership } = await supabase
+    .from('group_memberships').select('role')
+    .eq('group_id', groupId).eq('user_id', user.id).eq('status', 'active').single()
+  const isLeader = membership?.role === 'leader'
+
+  if (!isAdmin && !isLeader) redirect('/')
+
+  // Fields any leader or admin can change
+  const updatePayload: Record<string, string | null> = {
+    description:    (formData.get('description')    as string | null)?.trim() || null,
+    description_ml: (formData.get('description_ml') as string | null)?.trim() || null,
+    cover_image_url:(formData.get('cover_image_url') as string | null)?.trim() || null,
+  }
+
+  // Admin-only fields (name, name_ml, group_type)
+  if (isAdmin) {
+    const name = (formData.get('name') as string)?.trim()
+    if (name) updatePayload.name = name
+    updatePayload.name_ml    = (formData.get('name_ml')    as string | null)?.trim() || null
+    updatePayload.group_type = (formData.get('group_type') as string) || 'functional'
+  }
+
+  await supabase.from('groups').update(updatePayload).eq('id', groupId)
+
+  // Fetch current slug for path revalidation
+  const { data: g } = await supabase.from('groups').select('slug').eq('id', groupId).single()
+  if (g?.slug) {
+    revalidatePath(`/groups/${g.slug}`)
+    revalidatePath(`/manage/${g.slug}`)
+  }
+  revalidatePath('/groups')
+}
+
