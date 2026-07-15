@@ -5,8 +5,8 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: {
-    default: 'St. George Marthoma Church',
-    template: '%s | St. George Marthoma Church',
+    default: 'St. George Marthoma Syrian Church',
+    template: '%s | St. George Marthoma Syrian Church',
   },
   description: 'St. George Marthoma Syrian Church — Alappuzha Parish',
   manifest: '/manifest.json',
@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    siteName: 'St. George Marthoma Church',
-    title: 'St. George Marthoma Church',
+    siteName: 'St. George Marthoma Syrian Church',
+    title: 'St. George Marthoma Syrian Church',
     description: 'St. George Marthoma Syrian Church — Alappuzha Parish',
   },
 }
@@ -51,7 +51,7 @@ export default async function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="font-sans antialiased min-h-screen">
         <NextIntlClientProvider messages={messages}>
