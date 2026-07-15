@@ -4,10 +4,13 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Profile, FamilyMember } from '@/types/database'
 import { PlusCircle, Trash2, Languages, AlertTriangle } from 'lucide-react'
+import PhotoUpload from './PhotoUpload'
 
 interface Props {
   profile: Profile
   action: (formData: FormData) => Promise<{ error: string } | { success: true }>
+  /** Called when a photo is uploaded; undefined = hide photo upload (admin edit page) */
+  onPhotoUpload?: (type: 'avatar' | 'family', url: string) => Promise<{ error: string } | { success: true }>
   adminMode?: boolean
 }
 
@@ -57,7 +60,7 @@ function TransliterateButton({
   )
 }
 
-export default function MemberForm({ profile, action, adminMode = false }: Props) {
+export default function MemberForm({ profile, action, onPhotoUpload, adminMode = false }: Props) {
   const router = useRouter()
   const [isMobileWA, setIsMobileWA] = useState(profile.is_mobile_whatsapp ?? true)
   const [family, setFamily] = useState<FamilyMember[]>(
@@ -108,6 +111,36 @@ export default function MemberForm({ profile, action, adminMode = false }: Props
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+
+      {/* ── Photos (own profile only) ── */}
+      {onPhotoUpload && (
+        <div className={section}>
+          <p className="text-base font-bold text-brand-900 border-b border-amber-100 pb-2">📸 Photos</p>
+          <div className="flex flex-wrap gap-8 justify-center py-2">
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Profile Picture</p>
+              <PhotoUpload
+                userId={profile.id}
+                currentUrl={profile.avatar_url}
+                displayName={profile.full_name}
+                type="avatar"
+                onUploaded={(url) => onPhotoUpload('avatar', url)}
+              />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Family Photo</p>
+              <PhotoUpload
+                userId={profile.id}
+                currentUrl={profile.family_photo_url ?? null}
+                displayName={profile.full_name}
+                type="family"
+                onUploaded={(url) => onPhotoUpload('family', url)}
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-center text-muted-foreground">Photos save instantly when uploaded. No need to press "Save Details".</p>
+        </div>
+      )}
 
       {/* ── Personal Details ── */}
       <div className={section}>

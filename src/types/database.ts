@@ -27,6 +27,7 @@ export interface Database {
           phone: string
           house_name: string | null
           avatar_url: string | null
+          family_photo_url: string | null
           ui_language: 'en' | 'ml'
           is_admin: boolean
           status: 'pending' | 'active' | 'disabled'
@@ -57,6 +58,7 @@ export interface Database {
           is_mobile_whatsapp?: boolean
           email?: string | null
           family_members?: FamilyMember[]
+          family_photo_url?: string | null
         }
         Update: {
           id?: string
@@ -65,6 +67,7 @@ export interface Database {
           phone?: string
           house_name?: string | null
           avatar_url?: string | null
+          family_photo_url?: string | null
           ui_language?: 'en' | 'ml'
           is_admin?: boolean
           status?: 'pending' | 'active' | 'disabled'
@@ -76,6 +79,7 @@ export interface Database {
           is_mobile_whatsapp?: boolean
           email?: string | null
           family_members?: FamilyMember[]
+          family_photo_url?: string | null
         }
       }
       groups: {

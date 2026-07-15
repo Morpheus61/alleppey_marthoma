@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { Profile, GroupMembership, Group } from '@/types/database'
 import MemberForm from '@/components/directory/MemberForm'
-import { updateMyProfile } from './actions'
+import { updateMyProfile, updateMyPhoto } from './actions'
 
 export const metadata = { title: 'My Profile' }
 
@@ -56,7 +56,11 @@ export default async function ProfilePage() {
       {/* Edit Profile Form */}
       <section>
         <h2 className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-4">Edit My Details</h2>
-        <MemberForm profile={profile} action={updateMyProfile} />
+        <MemberForm
+          profile={profile}
+          action={updateMyProfile}
+          onPhotoUpload={async (type, url) => updateMyPhoto(type, url)}
+        />
       </section>
 
     </div>

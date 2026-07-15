@@ -86,3 +86,52 @@ export async function adminUpdateProfile(memberId: string, formData: FormData): 
   revalidatePath('/admin')
   return { success: true }
 }
+
+/* ── Photo URLs ──────────────────────────────── */
+
+/** Called immediately after a successful storage upload on the /me page */
+export async function updateMyPhoto(
+  type: 'avatar' | 'family',
+  url: string,
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const field = type === 'avatar' ? 'avatar_url' : 'family_photo_url'
+  const { error } = await supabase
+    .from('profiles')
+    .update({ [field]: url })
+    .eq('id', user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/me')
+  revalidatePath('/directory')
+  return { success: true }
+}
+
+/** Admin version — updates any member's photo URLs */
+export async function adminUpdatePhoto(
+  memberId: string,
+  type: 'avatar' | 'family',
+  url: string,
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+  const { data } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!data?.is_admin) redirect('/')
+
+  const field = type === 'avatar' ? 'avatar_url' : 'family_photo_url'
+  const { error } = await supabase
+    .from('profiles')
+    .update({ [field]: url })
+    .eq('id', memberId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/directory/${memberId}`)
+  revalidatePath('/directory')
+  return { success: true }
+}
