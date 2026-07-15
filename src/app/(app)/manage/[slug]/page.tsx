@@ -4,7 +4,6 @@ import Link from 'next/link'
 import type { Group, Profile } from '@/types/database'
 import { postToGroup, approveJoinRequest, declineJoinRequest, removeMember, appointLeader, revokeLeader } from './actions'
 import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
-import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
 
 interface Props { params: Promise<{ slug: string }> }
 
