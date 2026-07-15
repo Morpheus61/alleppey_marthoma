@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import Image from 'next/image'
 import { normalizePhone } from '@/lib/phone'
 
 type Step = 'phone' | 'otp'
@@ -74,56 +73,55 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 px-4 py-10">
-      <div className="w-full max-w-sm">
+    <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-10 overflow-hidden">
 
-        {/* ── Card ── */}
-        <div className="rounded-2xl shadow-2xl overflow-hidden">
+      {/* ── Watermark background ── */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/church_pic.png"
+        alt=""
+        aria-hidden
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+        style={{ opacity: 0.12 }}
+      />
+      {/* Warm beige tint over the watermark */}
+      <div aria-hidden className="absolute inset-0 bg-[#f9f0e3]/80" />
 
-          {/* ── Hero header ── */}
-          <div className="relative bg-brand-900 pt-10 pb-8 px-6 flex flex-col items-center gap-4">
-            {/* Subtle dot-grid texture */}
-            <div
-              aria-hidden
-              className="absolute inset-0 opacity-[0.06]"
-              style={{
-                backgroundImage:
-                  "url(\"data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='1' fill='white'/%3E%3C/svg%3E\")",
-              }}
+      {/* ── Card ── */}
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="rounded-2xl shadow-2xl overflow-hidden border border-amber-100">
+
+          {/* ── Header: cream / ivory ── */}
+          <div className="bg-[#fdf6eb] px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-amber-100">
+            {/* Logo — plain img avoids Next.js optimisation issues */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/MarThoma_logo.png"
+              alt="Mar Thoma Church Logo"
+              width={100}
+              height={100}
+              className="object-contain drop-shadow-md"
             />
 
-            {/* Logo in gold-tinted ring */}
-            <div className="relative z-10 p-2 rounded-full ring-2 ring-amber-300/50 bg-brand-800/50 shadow-xl">
-              <div className="relative w-24 h-24">
-                <Image
-                  src="/MarThoma_logo.png"
-                  alt="Mar Thoma Church Logo"
-                  fill
-                  className="object-contain drop-shadow"
-                  priority
-                />
-              </div>
-            </div>
-
             {/* Church name */}
-            <div className="relative z-10 text-center">
-              <h1 className="text-white font-bold text-xl leading-snug tracking-wide drop-shadow">
+            <div className="text-center">
+              <h1 className="text-brand-900 font-bold text-xl leading-snug tracking-wide">
                 St. George Marthoma
               </h1>
-              <h1 className="text-white font-bold text-xl leading-snug tracking-wide drop-shadow">
+              <h1 className="text-brand-900 font-bold text-xl leading-snug tracking-wide">
                 Syrian Church
               </h1>
-              <div className="mt-3 flex items-center justify-center gap-3">
-                <div className="h-px w-10 bg-amber-300/40" />
-                <span className="text-amber-200/80 text-[0.65rem] font-semibold tracking-[0.25em] uppercase">
+              <div className="mt-2 flex items-center justify-center gap-3">
+                <div className="h-px w-10 bg-amber-400/50" />
+                <span className="text-amber-700 text-[0.65rem] font-semibold tracking-[0.25em] uppercase">
                   Alappuzha
                 </span>
-                <div className="h-px w-10 bg-amber-300/40" />
+                <div className="h-px w-10 bg-amber-400/50" />
               </div>
             </div>
 
             {/* Motto */}
-            <p className="relative z-10 text-amber-200/60 text-[0.65rem] italic tracking-widest">
+            <p className="text-amber-600/60 text-[0.65rem] italic tracking-widest">
               ✦&nbsp;Lighted to Lighten&nbsp;✦
             </p>
           </div>
@@ -148,7 +146,7 @@ export default function LoginPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="98765 43210"
-                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-900 focus:bg-white min-h-[44px] transition-colors"
+                    className="w-full rounded-lg border border-amber-100 bg-amber-50/50 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-900 focus:bg-white min-h-[44px] transition-colors"
                     required
                   />
                   <p className="text-xs text-muted-foreground">{t('phoneHint')}</p>
@@ -180,7 +178,7 @@ export default function LoginPage() {
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="• • • • • •"
                     maxLength={6}
-                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-2xl text-center tracking-[0.5em] font-mono focus:outline-none focus:ring-2 focus:ring-brand-900 focus:bg-white min-h-[44px] transition-colors"
+                    className="w-full rounded-lg border border-amber-100 bg-amber-50/50 px-4 py-3 text-2xl text-center tracking-[0.5em] font-mono focus:outline-none focus:ring-2 focus:ring-brand-900 focus:bg-white min-h-[44px] transition-colors"
                     required
                   />
                 </div>
@@ -204,10 +202,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-center text-[0.6rem] text-gray-400 mt-5 tracking-wide">
+        <p className="text-center text-[0.6rem] text-amber-900/40 mt-5 tracking-wide">
           © {new Date().getFullYear()} St. George Marthoma Syrian Church, Alappuzha
         </p>
       </div>
     </div>
   )
 }
+
