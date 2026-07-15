@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import Image from 'next/image'
 import { normalizePhone } from '@/lib/phone'
 
 type Step = 'phone' | 'otp'
@@ -82,14 +81,18 @@ export default function LoginPage() {
 
           {/* ── Header: cream / ivory ── */}
           <div className="bg-[#fdf6eb] px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-amber-100">
-            {/* Logo — unoptimized skips the /_next/image pipeline so the PNG is served directly */}
-            <Image
-              src="/MarThoma_logo.png"
-              alt="Mar Thoma Church Logo"
-              width={100}
-              height={100}
-              unoptimized
-              className="drop-shadow-md"
+            {/* Logo — CSS background-image avoids next/image preload conflicts */}
+            <div
+              role="img"
+              aria-label="Mar Thoma Church Logo"
+              style={{
+                width: '100px',
+                height: '100px',
+                backgroundImage: 'url(/MarThoma_logo.png)',
+                backgroundSize: 'contain',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+              }}
             />
 
             {/* Church name */}

@@ -1,0 +1,17 @@
+# Ensure consistent line endings for text files
+* text=auto
+
+# Treat all image/binary formats as binary — never touch line endings
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.svg    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.pdf    binary
+*.zip    binary
