@@ -5,6 +5,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { normalizePhone } from '@/lib/phone'
+import { CrossSpinner } from '@/components/ui/LoadingIndicator'
 
 type Step = 'phone' | 'otp'
 
@@ -149,7 +150,10 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full rounded-lg bg-brand-900 text-white font-semibold py-3 min-h-[44px] hover:bg-brand-800 disabled:opacity-50 transition-colors shadow"
                 >
-                  {loading ? t('sending') : t('sendOtp')}
+                  <span className="inline-flex items-center justify-center gap-2">
+                    {loading && <CrossSpinner size={16} />}
+                    {loading ? t('sending') : t('sendOtp')}
+                  </span>
                 </button>
               </form>
             ) : (
@@ -180,7 +184,10 @@ export default function LoginPage() {
                   disabled={loading || otp.length !== 6}
                   className="w-full rounded-lg bg-brand-900 text-white font-semibold py-3 min-h-[44px] hover:bg-brand-800 disabled:opacity-50 transition-colors shadow"
                 >
-                  {loading ? t('verifying') : t('verify')}
+                  <span className="inline-flex items-center justify-center gap-2">
+                    {loading && <CrossSpinner size={16} />}
+                    {loading ? t('verifying') : t('verify')}
+                  </span>
                 </button>
                 <button
                   type="button"

@@ -68,3 +68,23 @@
     font-family: var(--font-noto-malayalam), sans-serif;
   }
 }
+
+/* ── Branded loading animation ── */
+@keyframes brand-pulse {
+  0%,  100% { opacity: 0.35; filter: drop-shadow(0 0 2px rgba(180, 83, 9, 0.1)); }
+  50%        { opacity: 1;    filter: drop-shadow(0 0 12px rgba(180, 83, 9, 0.45)); }
+}
+
+.shield-pulse,
+.cross-pulse {
+  animation: brand-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shield-pulse,
+  .cross-pulse {
+    animation: none;
+    opacity: 0.8;
+    filter: none;
+  }
+}
