@@ -9,6 +9,13 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export interface FamilyMember {
+  name: string
+  name_ml?: string | null
+  dob?: string | null        // ISO date "YYYY-MM-DD"
+  relation?: string | null   // "Spouse" | "Son" | "Daughter" | "Father" | "Mother" | other
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -24,6 +31,13 @@ export interface Database {
           is_admin: boolean
           status: 'pending' | 'active' | 'disabled'
           created_at: string
+          date_of_birth: string | null
+          address: string | null
+          phone_landline: string | null
+          whatsapp_number: string | null
+          is_mobile_whatsapp: boolean
+          email: string | null
+          family_members: FamilyMember[]
         }
         Insert: {
           id: string
@@ -36,6 +50,13 @@ export interface Database {
           is_admin?: boolean
           status?: 'pending' | 'active' | 'disabled'
           created_at?: string
+          date_of_birth?: string | null
+          address?: string | null
+          phone_landline?: string | null
+          whatsapp_number?: string | null
+          is_mobile_whatsapp?: boolean
+          email?: string | null
+          family_members?: FamilyMember[]
         }
         Update: {
           id?: string
@@ -48,6 +69,13 @@ export interface Database {
           is_admin?: boolean
           status?: 'pending' | 'active' | 'disabled'
           created_at?: string
+          date_of_birth?: string | null
+          address?: string | null
+          phone_landline?: string | null
+          whatsapp_number?: string | null
+          is_mobile_whatsapp?: boolean
+          email?: string | null
+          family_members?: FamilyMember[]
         }
       }
       groups: {
@@ -121,6 +149,7 @@ export interface Database {
           visibility: 'members' | 'public'
           image_urls: string[]
           is_pinned: boolean
+          is_deleted: boolean
           created_at: string
           updated_at: string
         }
@@ -133,6 +162,7 @@ export interface Database {
           visibility?: 'members' | 'public'
           image_urls?: string[]
           is_pinned?: boolean
+          is_deleted?: boolean
           created_at?: string
           updated_at?: string
         }
