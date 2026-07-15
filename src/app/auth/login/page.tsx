@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import Image from 'next/image'
 import { normalizePhone } from '@/lib/phone'
 
 type Step = 'phone' | 'otp'
@@ -73,34 +74,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-10 overflow-hidden">
-
-      {/* ── Watermark background ── */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/church_pic.png"
-        alt=""
-        aria-hidden
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
-        style={{ opacity: 0.12 }}
-      />
-      {/* Warm beige tint over the watermark */}
-      <div aria-hidden className="absolute inset-0 bg-[#f9f0e3]/80" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f9f0e3] px-4 py-10">
 
       {/* ── Card ── */}
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="w-full max-w-sm">
         <div className="rounded-2xl shadow-2xl overflow-hidden border border-amber-100">
 
           {/* ── Header: cream / ivory ── */}
           <div className="bg-[#fdf6eb] px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-amber-100">
-            {/* Logo — plain img avoids Next.js optimisation issues */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            {/* Logo — unoptimized skips the /_next/image pipeline so the PNG is served directly */}
+            <Image
               src="/MarThoma_logo.png"
               alt="Mar Thoma Church Logo"
               width={100}
               height={100}
-              className="object-contain drop-shadow-md"
+              unoptimized
+              className="drop-shadow-md"
             />
 
             {/* Church name */}
@@ -209,4 +198,5 @@ export default function LoginPage() {
     </div>
   )
 }
+
 
