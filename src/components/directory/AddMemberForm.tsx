@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react'
-import { addMember } from '../(app)/directory/actions'
+import { addMember } from '@/app/(app)/directory/actions'
 
 const inp =
   'w-full rounded-xl border border-amber-100 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 placeholder:text-gray-400 shadow-sm'
