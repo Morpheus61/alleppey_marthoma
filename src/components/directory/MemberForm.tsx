@@ -3,11 +3,11 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Profile, FamilyMember } from '@/types/database'
-import { PlusCircle, Trash2, Languages } from 'lucide-react'
+import { PlusCircle, Trash2, Languages, AlertTriangle } from 'lucide-react'
 
 interface Props {
   profile: Profile
-  action: (formData: FormData) => Promise<void>
+  action: (formData: FormData) => Promise<{ error: string } | { success: true }>
   adminMode?: boolean
 }
 
@@ -66,6 +66,7 @@ export default function MemberForm({ profile, action, adminMode = false }: Props
   const [fullNameMl, setFullNameMl] = useState(profile.full_name_ml ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Refs for transliteration source
   const fullNameRef = useRef<HTMLInputElement>(null)
@@ -85,6 +86,7 @@ export default function MemberForm({ profile, action, adminMode = false }: Props
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaving(true)
+    setSaveError(null)
     const fd = new FormData(e.currentTarget)
     fd.set('full_name_ml', fullNameMl)
     fd.delete('fm_name'); fd.delete('fm_dob'); fd.delete('fm_relation')
@@ -93,11 +95,15 @@ export default function MemberForm({ profile, action, adminMode = false }: Props
       fd.append('fm_dob',      m.dob  ?? '')
       fd.append('fm_relation', m.relation ?? '')
     })
-    await action(fd)
+    const result = await action(fd)
     setSaving(false)
-    setSaved(true)
-    router.refresh()
-    setTimeout(() => setSaved(false), 3000)
+    if (result && 'error' in result) {
+      setSaveError(result.error)
+    } else {
+      setSaved(true)
+      router.refresh()
+      setTimeout(() => setSaved(false), 3000)
+    }
   }
 
   return (
@@ -247,7 +253,7 @@ export default function MemberForm({ profile, action, adminMode = false }: Props
         </div>
       )}
 
-      {/* ── Submit — NOT sticky; sits naturally at bottom ── */}
+      {/* ── Submit ── */}
       <div className="pt-2 pb-4">
         <button
           type="submit"
@@ -260,6 +266,16 @@ export default function MemberForm({ profile, action, adminMode = false }: Props
           <p className="text-center text-xs text-green-600 mt-2 font-medium">
             ✓ Your details have been saved successfully.
           </p>
+        )}
+        {saveError && (
+          <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 mt-3">
+            <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Save failed</p>
+              <p className="text-xs text-red-600 mt-0.5 font-mono break-all">{saveError}</p>
+              <p className="text-xs text-red-500 mt-1">Please screenshot this error and send it to the App Admin.</p>
+            </div>
+          </div>
         )}
       </div>
 
@@ -347,8 +363,3 @@ function FamilyMemberRow({
 }
 
 
-interface Props {
-  profile: Profile
-  action: (formData: FormData) => Promise<void>
-  adminMode?: boolean
-}

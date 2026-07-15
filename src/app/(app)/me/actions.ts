@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { FamilyMember } from '@/types/database'
 
-export async function updateMyProfile(formData: FormData) {
+export async function updateMyProfile(formData: FormData): Promise<{ error: string } | { success: true }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
@@ -24,7 +24,7 @@ export async function updateMyProfile(formData: FormData) {
 
   const isMobileWA = formData.get('is_mobile_whatsapp') === 'yes'
 
-  await supabase.from('profiles').update({
+  const { error } = await supabase.from('profiles').update({
     full_name:          (formData.get('full_name')    as string).trim(),
     full_name_ml:       (formData.get('full_name_ml') as string | null)?.trim() || null,
     house_name:         (formData.get('house_name')   as string | null)?.trim() || null,
@@ -37,12 +37,15 @@ export async function updateMyProfile(formData: FormData) {
     family_members:     familyMembers,
   }).eq('id', user.id)
 
+  if (error) return { error: error.message }
+
   revalidatePath('/me')
   revalidatePath('/')
   revalidatePath('/directory')
+  return { success: true }
 }
 
-export async function adminUpdateProfile(memberId: string, formData: FormData) {
+export async function adminUpdateProfile(memberId: string, formData: FormData): Promise<{ error: string } | { success: true }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
@@ -62,7 +65,7 @@ export async function adminUpdateProfile(memberId: string, formData: FormData) {
 
   const isMobileWA = formData.get('is_mobile_whatsapp') === 'yes'
 
-  await supabase.from('profiles').update({
+  const { error } = await supabase.from('profiles').update({
     full_name:          (formData.get('full_name')    as string).trim(),
     full_name_ml:       (formData.get('full_name_ml') as string | null)?.trim() || null,
     house_name:         (formData.get('house_name')   as string | null)?.trim() || null,
@@ -76,7 +79,10 @@ export async function adminUpdateProfile(memberId: string, formData: FormData) {
     status:             (formData.get('status') as 'active' | 'pending' | 'disabled') || 'active',
   }).eq('id', memberId)
 
+  if (error) return { error: error.message }
+
   revalidatePath(`/directory/${memberId}`)
   revalidatePath('/directory')
   revalidatePath('/admin')
+  return { success: true }
 }
