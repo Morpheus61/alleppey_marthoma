@@ -3,21 +3,25 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Group, Profile } from '@/types/database'
 import { postToGroup, approveJoinRequest, declineJoinRequest, removeMember, appointLeader, revokeLeader } from './actions'
+import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
+import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props) {
+  const { slug } = await params
   const supabase = await createClient()
-  const { data } = await supabase.from('groups').select('name').eq('slug', params.slug).single()
+  const { data } = await supabase.from('groups').select('name').eq('slug', slug).single()
   return { title: `Manage · ${data?.name ?? 'Group'}` }
 }
 
 export default async function ManagePage({ params }: Props) {
+  const { slug } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: groupData } = await supabase.from('groups').select('*').eq('slug', params.slug).single()
+  const { data: groupData } = await supabase.from('groups').select('*').eq('slug', slug).single()
   const group = groupData as Group | null
   if (!group) notFound()
 
@@ -67,33 +71,12 @@ export default async function ManagePage({ params }: Props) {
       {/* ── Post Composer ── */}
       <section>
         <h2 className="text-base font-bold text-brand-900 mb-3">Post Message</h2>
-        <form action={postAction} className="bg-white rounded-xl border border-amber-100 shadow-sm p-4 space-y-3">
-          <input
-            name="title"
-            placeholder="Title (optional)"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900"
-          />
-          <textarea
-            name="body"
-            required
-            rows={5}
-            placeholder={`Write a message for ${group.name}…`}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 resize-none"
-          />
-          <div className="flex flex-wrap items-center gap-3">
-            <select name="visibility" className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900">
-              <option value="members">Members only</option>
-              <option value="public">Public</option>
-            </select>
-            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-              <input type="checkbox" name="is_pinned" className="rounded accent-brand-900" />
-              📌 Pin this post
-            </label>
-          </div>
-          <button type="submit" className={`w-full ${btn} bg-brand-900 text-white hover:bg-brand-800 py-2.5`}>
-            Post to {group.name}
-          </button>
-        </form>
+        <BilingualPostComposer
+          action={postAction}
+          groupName={group.name}
+          showPinOption={true}
+          submitLabel={`Post to ${group.name}`}
+        />
       </section>
 
       {/* ── Join Requests ── */}

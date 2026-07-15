@@ -3,27 +3,29 @@ import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 export async function generateMetadata({ params }: Props) {
+  const { slug } = await params
   const supabase = await createClient()
   const { data } = await supabase
     .from('groups')
     .select('name')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .single()
   return { title: data?.name ?? 'Group' }
 }
 
 export default async function GroupPublicPage({ params }: Props) {
+  const { slug } = await params
   const t = await getTranslations('groups')
   const supabase = await createClient()
 
   const { data: group } = await supabase
     .from('groups')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .eq('is_archived', false)
     .single()
 

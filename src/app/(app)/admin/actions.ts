@@ -71,8 +71,10 @@ export async function postAnnouncement(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const title      = (formData.get('title') as string | null)?.trim() || null
-  const body       = (formData.get('body')  as string).trim()
+  const title      = (formData.get('title')    as string | null)?.trim() || null
+  const title_ml   = (formData.get('title_ml') as string | null)?.trim() || null
+  const body       = (formData.get('body')      as string).trim()
+  const body_ml    = (formData.get('body_ml')  as string | null)?.trim() || null
   const visibility = (formData.get('visibility') as 'members' | 'public') || 'members'
   const groupId    = (formData.get('group_id') as string | null) || null
 
@@ -82,7 +84,9 @@ export async function postAnnouncement(formData: FormData) {
     author_id: user.id,
     group_id: groupId || null,
     title,
+    title_ml,
     body,
+    body_ml,
     visibility,
     is_pinned: false,
     is_deleted: false,

@@ -5,15 +5,17 @@ import type { Profile } from '@/types/database'
 import MemberForm from '@/components/directory/MemberForm'
 import { adminUpdateProfile } from '../../me/actions'
 
-interface Props { params: { id: string } }
+interface Props { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props) {
+  const { id } = await params
   const supabase = await createClient()
-  const { data } = await supabase.from('profiles').select('full_name').eq('id', params.id).single()
+  const { data } = await supabase.from('profiles').select('full_name').eq('id', id).single()
   return { title: `Edit · ${data?.full_name ?? 'Member'}` }
 }
 
 export default async function MemberEditPage({ params }: Props) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
@@ -21,11 +23,11 @@ export default async function MemberEditPage({ params }: Props) {
   const { data: me } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!me?.is_admin) redirect('/')
 
-  const { data } = await supabase.from('profiles').select('*').eq('id', params.id).single()
+  const { data } = await supabase.from('profiles').select('*').eq('id', id).single()
   const member = data as Profile | null
   if (!member) notFound()
 
-  const updateAction = adminUpdateProfile.bind(null, params.id)
+  const updateAction = adminUpdateProfile.bind(null, id)
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-5">

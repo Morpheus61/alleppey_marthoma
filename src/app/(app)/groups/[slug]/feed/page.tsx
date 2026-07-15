@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export default async function GroupFeedPage({ params }: Props) {
+  const { slug } = await params
   const t = await getTranslations('feed')
   const supabase = await createClient()
 
@@ -16,7 +17,7 @@ export default async function GroupFeedPage({ params }: Props) {
   const { data: group } = await supabase
     .from('groups')
     .select('id, name')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .single()
   if (!group) notFound()
 
@@ -39,7 +40,7 @@ export default async function GroupFeedPage({ params }: Props) {
 
   const { data: posts } = await supabase
     .from('posts')
-    .select('id, title, body, created_at, is_pinned, author_id, profiles(full_name)')
+    .select('id, title, title_ml, body, body_ml, created_at, is_pinned, author_id, profiles(full_name)')
     .eq('group_id', group.id)
     .eq('is_deleted', false)
     .order('is_pinned', { ascending: false })
@@ -59,8 +60,26 @@ export default async function GroupFeedPage({ params }: Props) {
                 📌 {t('pinned')}
               </span>
             )}
-            {post.title && <h2 className="font-semibold mb-1">{post.title}</h2>}
-            <p className="text-sm whitespace-pre-wrap">{post.body}</p>
+            {/* Title — Malayalam first if present */}
+            {(post.title_ml || post.title) && (
+              <div className="mb-1 space-y-0.5">
+                {post.title_ml && (
+                  <h2 className="font-semibold font-malayalam" lang="ml">{post.title_ml}</h2>
+                )}
+                {post.title && (
+                  <h2 className={`font-semibold ${post.title_ml ? 'text-sm text-muted-foreground' : ''}`}>
+                    {post.title}
+                  </h2>
+                )}
+              </div>
+            )}
+            {/* Body — Malayalam first if present */}
+            {post.body_ml && (
+              <p className="text-sm font-malayalam whitespace-pre-wrap mb-1" lang="ml">{post.body_ml}</p>
+            )}
+            <p className={`text-sm whitespace-pre-wrap ${post.body_ml ? 'text-muted-foreground' : ''}`}>
+              {post.body}
+            </p>
             <p className="text-xs text-muted-foreground mt-2">
               {new Date(post.created_at).toLocaleDateString('en-IN', {
                 day: 'numeric', month: 'short', year: 'numeric',

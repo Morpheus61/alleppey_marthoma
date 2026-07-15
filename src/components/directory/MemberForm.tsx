@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Profile, FamilyMember } from '@/types/database'
 import { PlusCircle, Trash2, Languages } from 'lucide-react'
 
@@ -57,6 +58,7 @@ function TransliterateButton({
 }
 
 export default function MemberForm({ profile, action, adminMode = false }: Props) {
+  const router = useRouter()
   const [isMobileWA, setIsMobileWA] = useState(profile.is_mobile_whatsapp ?? true)
   const [family, setFamily] = useState<FamilyMember[]>(
     profile.family_members?.length ? profile.family_members : []
@@ -94,6 +96,7 @@ export default function MemberForm({ profile, action, adminMode = false }: Props
     await action(fd)
     setSaving(false)
     setSaved(true)
+    router.refresh()
     setTimeout(() => setSaved(false), 3000)
   }
 

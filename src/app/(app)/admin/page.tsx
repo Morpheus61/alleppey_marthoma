@@ -7,6 +7,8 @@ import {
   createGroup, archiveGroup, unarchiveGroup,
   postAnnouncement,
 } from './actions'
+import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
+import type { GroupOption } from '@/components/posts/BilingualPostComposer'
 
 export const metadata = { title: 'Admin Dashboard' }
 
@@ -100,35 +102,12 @@ export default async function AdminPage() {
       {/* ── Post Parish Announcement ── */}
       <section>
         <h2 className="text-lg font-bold text-brand-900 mb-3">Post Announcement</h2>
-        <form action={postAnnouncement} className="bg-white rounded-xl border shadow-sm p-4 space-y-3">
-          <input
-            name="title"
-            placeholder="Title (optional)"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900"
-          />
-          <textarea
-            name="body"
-            required
-            rows={4}
-            placeholder="Write your message to the parish…"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 resize-none"
-          />
-          <div className="flex items-center gap-3">
-            <select name="group_id" className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900">
-              <option value="">📣 All Members (Parish-wide)</option>
-              {activeGroups.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-            <select name="visibility" className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900">
-              <option value="members">Members only</option>
-              <option value="public">Public</option>
-            </select>
-          </div>
-          <button type="submit" className={`w-full ${btn} bg-brand-900 text-white hover:bg-brand-800`}>
-            Post Announcement
-          </button>
-        </form>
+        <BilingualPostComposer
+          action={postAnnouncement}
+          showGroupSelector={true}
+          groupOptions={activeGroups as GroupOption[]}
+          submitLabel="Post Announcement"
+        />
       </section>
 
       {/* ── Groups ── */}
