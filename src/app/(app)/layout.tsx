@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
+import InstallPrompt from '@/components/layout/InstallPrompt'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Profile } from '@/types/database'
@@ -62,6 +63,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       {/* ── Bottom navigation ── */}
       <BottomNav isAdmin={profile.is_admin ?? false} />
+
+      {/* ── PWA Install prompt ── */}
+      <InstallPrompt />
     </div>
   )
 }

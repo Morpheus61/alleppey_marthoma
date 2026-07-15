@@ -38,6 +38,7 @@ export async function updateMyProfile(formData: FormData) {
   }).eq('id', user.id)
 
   revalidatePath('/me')
+  revalidatePath('/')
   revalidatePath('/directory')
 }
 

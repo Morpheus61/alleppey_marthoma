@@ -29,4 +29,14 @@ module.exports = {
       'next-intl/config': './src/i18n/request.ts',
     },
   },
+  // Ensure sw.js is served without caching so updates propagate immediately
+  headers: async () => [
+    {
+      source: '/sw.js',
+      headers: [
+        { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        { key: 'Service-Worker-Allowed', value: '/' },
+      ],
+    },
+  ],
 }
