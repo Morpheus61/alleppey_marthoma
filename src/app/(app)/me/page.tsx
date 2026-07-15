@@ -4,7 +4,6 @@ import Link from 'next/link'
 import type { Profile, GroupMembership, Group } from '@/types/database'
 import MemberForm from '@/components/directory/MemberForm'
 import { updateMyProfile } from './actions'
-import SignOutButton from '@/components/auth/SignOutButton'
 
 export const metadata = { title: 'My Profile' }
 
@@ -27,10 +26,7 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-brand-900">My Profile</h1>
-        <SignOutButton />
-      </div>
+      <h1 className="text-2xl font-bold text-brand-900">My Profile</h1>
 
       {/* My Groups */}
       {memberships && memberships.length > 0 && (
