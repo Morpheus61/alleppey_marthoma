@@ -28,6 +28,12 @@ export default async function RegistryPage() {
     return acc
   }, {})
 
+  // Profiles not yet linked to any family member row
+  const { data: allProfiles } = await supabase.from('profiles').select('id').eq('status', 'active')
+  const { data: linkedRaw } = await supabase.from('family_members').select('profile_id').not('profile_id', 'is', null)
+  const linkedIds = new Set((linkedRaw ?? []).map(m => m.profile_id as string))
+  const unlinkedCount = (allProfiles ?? []).filter(p => !linkedIds.has(p.id)).length
+
   return (
     <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -40,6 +46,21 @@ export default async function RegistryPage() {
           + Add Household
         </Link>
       </div>
+
+      {/* Unlinked members banner */}
+      {unlinkedCount > 0 && (
+        <div className="rounded-xl bg-amber-50 border border-amber-300 px-4 py-3 flex items-center gap-3">
+          <span className="text-lg">⚠️</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-900">
+              {unlinkedCount} registered member{unlinkedCount > 1 ? 's' : ''} not yet linked to a household
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Open a household card and use <strong>Link account</strong> to connect them to the registry.
+            </p>
+          </div>
+        </div>
+      )}
 
       {(!families || families.length === 0) && (
         <div className="text-center py-16 space-y-2">

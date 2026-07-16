@@ -60,6 +60,18 @@ export async function updateHousehold(formData: FormData): Promise<{ error: stri
   return { success: true }
 }
 
+export async function addMembersToGroup(groupId: string, profileIds: string[]): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireAdminOrAbove()
+  if (!profileIds.length) return { error: 'Select at least one member.' }
+  const rows = profileIds.map(uid => ({ group_id: groupId, user_id: uid, role: 'member' as const, status: 'active' as const }))
+  const { error } = await supabase
+    .from('group_memberships')
+    .upsert(rows, { onConflict: 'group_id,user_id', ignoreDuplicates: false })
+  if (error) return { error: error.message }
+  revalidatePath('/admin/registry')
+  return { success: true }
+}
+
 export async function linkProfileToMember(memberId: string, profileId: string): Promise<{ error: string } | { success: true }> {
   const { supabase } = await requireAdminOrAbove()
   const { data: fm } = await supabase.from('family_members').select('family_id').eq('id', memberId).single()
