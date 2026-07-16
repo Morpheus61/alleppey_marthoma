@@ -33,7 +33,7 @@ The app replaces paper directories, WhatsApp broadcast chaos, and phone-call cha
 
 ### For Every Member
 - **Register & Sign In** — using your Indian mobile number (OTP-based, no password needed)
-- **My Profile** — save your full name (English & Malayalam), house name, address, date of birth, phone numbers, email, and family members
+- **My Profile** — view your data as a formatted card (name, DOB, address, family members, photos); tap **Edit** to update
 - **Profile Photo** — upload your own profile picture (round avatar)
 - **Family Photo** — upload a household family photo (shown in the Parish Directory)
 - **Parish Directory** — browse and search all active parish members, sectioned by Bhagam (ward)
@@ -65,7 +65,7 @@ The app replaces paper directories, WhatsApp broadcast chaos, and phone-call cha
 - **Manage All Profiles** — edit member details; activate, disable or restore accounts
 - **Create & Manage Groups** — create new parish groups, archive inactive ones
 - **Post Parish-Wide Bilingual Announcements** — English + Malayalam messages to the entire parish
-- **Parish Registry** — manage household records (family_units), family members, and life events (baptism, confirmation, marriage, death)
+- **Parish Registry** — manage household records (family_units), family members, and life events (baptism, confirmation, marriage, death); add members to prayer groups and other groups from the registry
 - **Propose Changes** — for registry/financial changes, submit a change request to the Vicar
 
 ### For the Vicar / Super Admin (full control)
@@ -96,7 +96,10 @@ The app replaces paper directories, WhatsApp broadcast chaos, and phone-call cha
 The app maintains a full household-based parish registry:
 
 - **Households (Family Units)** — each family has a house name, address, and ward (Bhagam) assignment
-- **Family Members** — every person in the household is registered with name, relation, date of birth, and gender
+- **Family Members** — every person in the household is registered with name (EN + ML), relation, date of birth, and gender
+- **Profile Linking** — admin can link any registered member’s app account to their family member row; shows linked phone + tick badge
+- **Group Enrolment** — from a household, admin can enrol selected family members into any group (prayer group assigned automatically; functional/youth groups can be chosen per-member)
+- **Unlinked Profiles Panel** — the Registry list shows a banner of registered app members not yet linked to any household, with one-click link action
 - **Life Events** — baptism, confirmation, marriage, death and other events are recorded with date, place, officiant, register number and certificate number. Events are never edited in place — corrections chain to preserve history.
 - **Ward Assignment** — assigning a family to a prayer group (Bhagam) automatically adds all linked members to that ward’s group
 
@@ -177,4 +180,4 @@ The app adapts to the device being used:
 
 ---
 
-*Last updated: 2026-07-16 (Wave 2 complete)*
+*Last updated: 2026-07-17 (Wave 2: Registry UI + Finance + Roles complete)*

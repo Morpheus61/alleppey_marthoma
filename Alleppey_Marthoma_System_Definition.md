@@ -1,6 +1,6 @@
 # Alleppey Marthoma — System Definition
 ### St. George Marthoma Syrian Church Community PWA
-**Last Updated:** 2026-07-16 | **Build Stage:** Stages 1–6 + Wave 2 Foundations Complete
+**Last Updated:** 2026-07-17 | **Build Stage:** Stages 1–6 + Wave 2 UI Complete
 
 ---
 
@@ -957,7 +957,7 @@ npx playwright test  # Run E2E tests
 | **4** | Admin dashboard | ✅ **Complete** | Member approval, group CRUD, parish announcements, member management, bulk import |
 | **5** | Leader dashboard + post composer | ✅ **Complete** | BilingualPostComposer with Draft→ + review-gate; preview-before-post; ML-only valid |
 | **6** | Directory + profile CRUD + photos | ✅ **Complete** | Full CRUD, photo upload (avatar + family), disable/reactivate, responsive layout |
-| **Wave 2** | Role system + Maker-checker + Registry + Finance | ✅ **Foundations** | Migrations 011–013, TypeScript types, server actions, route stubs; UI completion pending |
+| **Wave 2** | Role system + Maker-checker + Registry + Finance | ✅ **UI Complete** | Migrations 011–014, full registry CRUD, profile view/edit, household + family member management, group enrolment from registry |
 | **7** | i18n pass + local font bundling | 🔲 **Partial** | English + Malayalam strings done; local WOFF2 font bundling pending |
 | **8** | PWA + Push notifications + cron | 🔲 **Partial** | Service Worker updated (cache-busting); VAPID keys generated; push fanout pending |
 | **9** | Polish — empty states, skeletons, a11y | 🔲 Not started | Lighthouse PWA ≥ 90, a11y audit |
@@ -1090,14 +1090,51 @@ Data migration: existing `profiles.family_members` JSONB → `family_units` + `f
 
 ---
 
+### New Wave 2 Components (Registry UI)
+
+| File | Path | Purpose |
+|---|---|---|
+| `registry/actions.ts` | `src/app/(app)/admin/registry/` | Server actions: createHousehold, addFamilyMember, updateHousehold, linkProfileToMember |
+| `registry/NewHouseholdForm.tsx` | `src/app/(app)/admin/registry/` | Client form: house name EN+ML, address, Bhagam selector |
+| `registry/new/page.tsx` | `src/app/(app)/admin/registry/new/` | New household page |
+| `registry/[id]/page.tsx` | `src/app/(app)/admin/registry/[id]/` | Household detail: members, link accounts, add-member form |
+| `registry/[id]/FamilyComponents.tsx` | `src/app/(app)/admin/registry/[id]/` | Client components: AddMemberForm, LinkProfileButton, GroupEnrolForm |
+| `ProfileCard.tsx` | `src/components/directory/` | Profile view/edit toggle card (shows data; Edit button reveals MemberForm) |
+
+**Profile page UX:** `/me` now renders `ProfileCard` (view mode by default). Edit button reveals `MemberForm`. After save, returns to view mode automatically.
+
+**Registry CRUD flow:**
+1. Admin → Registry → + Add Household → `NewHouseholdForm` (house name EN+ML, address, Bhagam dropdown)
+2. Redirects to `/admin/registry/[id]` (household detail)
+3. Detail page shows family members, linked account badges, Add Member form, Group Enrol form
+4. **Unlinked Profiles Panel** — active profiles not yet linked to any `family_members` row are shown as a banner; admin can link with one click
+5. **Group Enrolment** — select a group + tick which family members to add; creates `group_memberships` rows
+
+---
+
+### Migration 014: Finance Seed Data
+
+Seeds default funds and collection types. Safe to re-run (WHERE NOT EXISTS guards). Requires at least one `super_admin` or `is_admin=true` profile.
+
+**2 Funds:** General Fund (പൊതു ഫണ്ട്) · Charity & Palliative Fund
+
+**5 Collection Types (all under General Fund):**
+- Masavari — subscription, fixed ₹300/month ⛪CONFIG-2
+- Sunday Offertory — service_offertory, open, office-only
+- Birthday Thanksgiving — appeal, open
+- Wedding Anniversary Thanksgiving — appeal, open
+- Building Fund — appeal, open, target ₹5L, parish-visible progress bar ⛪CONFIG-2
+
+All rows editable/archivable by super_admin via Finance UI.
+
+---
+
 ### Config Placeholder Files
 
 | File | Purpose | Status |
 |---|---|---|
 | `config/bhagams.example.json` | ⛪CONFIG-1: Bhagam/ward names in correct Malayalam | Awaiting Vicar |
 | `config/funds.example.json` | ⛪CONFIG-2: Fund names + collection types + Masavari amount | Awaiting Vicar |
-
-Settings in `app_settings` table awaiting Vicar decision:
 - `receipt_prefix` / `receipt_start_number` — ⛪CONFIG-3
 - `show_arrears_to_family` — ⛪CONFIG-4 (default: `false`)
 
