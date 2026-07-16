@@ -252,6 +252,9 @@ export default function MemberForm({ profile, action, onPhotoUpload, adminMode =
       <div className={section}>
         <p className="text-base font-bold text-brand-900 border-b border-amber-100 pb-2">👨‍👩‍👧‍👦 Family Members</p>
         <p className="text-xs text-muted-foreground">List everyone living in your household — spouse, children, parents</p>
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          🔒 <strong>Privacy:</strong> Family member names, dates of birth, and contact details are visible only to church Admins and to you. They are never displayed in the member directory.
+        </p>
 
         {family.map((m, i) => (
           <FamilyMemberRow

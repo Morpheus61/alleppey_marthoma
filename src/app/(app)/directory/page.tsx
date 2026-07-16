@@ -27,9 +27,14 @@ export default async function DirectoryPage({ searchParams }: Props) {
 
   const q = qRaw?.trim() ?? ''
 
+  // Non-admins see only the columns needed for the directory card.
+  // DOB, email, full address are omitted from the listing for privacy.
+  const baseSelect = 'id, full_name, full_name_ml, phone, house_name, avatar_url, family_photo_url, is_admin, whatsapp_number, is_mobile_whatsapp, status'
+  const adminSelect = `${baseSelect}, date_of_birth, address, email`
+
   let query = supabase
     .from('profiles')
-    .select('id, full_name, full_name_ml, phone, house_name, avatar_url, family_photo_url, is_admin, whatsapp_number, is_mobile_whatsapp, date_of_birth, address, email, status')
+    .select(myProfile.is_admin ? adminSelect : baseSelect)
     .in('status', myProfile.is_admin ? ['active', 'disabled'] : ['active'])
     .order('full_name')
 

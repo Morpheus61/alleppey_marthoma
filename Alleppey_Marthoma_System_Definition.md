@@ -179,7 +179,7 @@
 
 ```bash
 # ── PUBLIC (safe in client bundle) ─────────────────────────
-NEXT_PUBLIC_SUPABASE_URL=https://nsuxmlbrehmqdwogkjwr.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://furbmmtqnrtaelryonlo.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...  # (anon JWT — see actual file)
 
 # ── SECRET (server-only, never expose to client) ───────────
@@ -200,9 +200,9 @@ TWOFACTOR_TEMPLATE_NAME=                  # ⚠ Awaiting DLT approval
 ### Supabase Project
 | Field | Value |
 |---|---|
-| **Project ID** | `nsuxmlbrehmqdwogkjwr` |
-| **Project URL** | `https://nsuxmlbrehmqdwogkjwr.supabase.co` |
-| **Dashboard** | https://supabase.com/dashboard/project/nsuxmlbrehmqdwogkjwr |
+| **Project ID** | `furbmmtqnrtaelryonlo` |
+| **Project URL** | `https://furbmmtqnrtaelryonlo.supabase.co` |
+| **Dashboard** | https://supabase.com/dashboard/project/furbmmtqnrtaelryonlo |
 | **Region** | (Supabase default — check dashboard) |
 | **Tier** | Free |
 
@@ -322,7 +322,7 @@ const nextConfig = {
   images: {
     remotePatterns: [{
       protocol: 'https',
-      hostname: 'nsuxmlbrehmqdwogkjwr.supabase.co',
+      hostname: 'furbmmtqnrtaelryonlo.supabase.co',
       pathname: '/storage/v1/object/public/**',
     }],
   },
@@ -981,7 +981,7 @@ npx playwright test  # Run E2E tests
 ### ④ Supabase TypeScript Generics
 **Cause:** `@supabase/supabase-js@2.110.4` type inference requires CLI-generated types; hand-written `Database` interface causes `never` types.  
 **Workaround:** `Database` generic removed from `createServerClient`. Manual `as Profile | null` casts used in every server page.  
-**Fix (Stage 9):** Run `npx supabase gen types typescript --project-id nsuxmlbrehmqdwogkjwr > src/types/database.ts` to regenerate proper types.
+**Fix (Stage 9):** Run `npx supabase gen types typescript --project-id furbmmtqnrtaelryonlo > src/types/database.ts` to regenerate proper types.
 
 ### ⑤ Google Fonts Unreachable at Build Time
 **Cause:** Build machine cannot reach `fonts.googleapis.com`.  
@@ -1010,30 +1010,27 @@ npx playwright test  # Run E2E tests
 
 ## 22. Pending Actions Required
 
-| Priority | Action | Owner | Notes |
-|---|---|---|---|
-| 🔴 **Critical** | **Rotate 2Factor API key** — original was printed in this doc and is burned | Dev | Log in to app.2factor.in, revoke old key, generate new one, update `.env.local` and Vercel |
-| 🔴 **Critical** | Run migrations 001–005 in Supabase SQL Editor | Dev | Required before any testing |
-| 🔴 **Critical** | Set `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` | Dev | Required for admin operations |
-| 🔴 **Critical** | DLT header + template registration (India) | Church/Dev | Vilpower registration, ~5 working days |
-| 🔴 **Critical** | Consider making GitHub repo **private** | Dev | Public repo + documented credentials = exposure risk; Vercel Hobby deploys private repos fine |
-| 🟡 **High** | Regenerate Supabase TypeScript types | Dev | First command of Stage 4: `npx supabase gen types typescript --project-id nsuxmlbrehmqdwogkjwr > src/types/database.ts` |
-| 🟡 **High** | Add `push_subscriptions` unique constraint | Dev/Stage 8 | Prevents double-notifications on re-subscribe: `UNIQUE (user_id, (subscription->>'endpoint'))` — add as migration 006 |
-| 🟡 **High** | Add soft-delete to `events` table | Dev/Stage 5 | Add `is_deleted boolean DEFAULT false NOT NULL` + `deleted_at timestamptz` — same undo-toast requirement as posts; add as migration 006 |
-| 🟡 **High** | Set `TWOFACTOR_TEMPLATE_NAME` once DLT approved | Dev | Unblock production SMS OTP |
-| 🟡 **High** | Generate VAPID keys, set in `.env.local` | Dev | ✅ Done — keys generated 2026-07-14 |
-| 🟡 **High** | Generate `CRON_SECRET`, set in `.env.local` | Dev | ✅ Done — generated 2026-07-14 |
-| 🟡 **High** | Upload PWA icons to `/public/icons/` | Dev | Drop in icon-192x192.png, icon-512x512.png, icon-maskable-512x512.png, apple-touch-icon.png (180×180) |
-| 🟢 **Medium** | Enable Supabase Realtime publication (Stage 6) | Dev | Dashboard → Database → Replication → enable `posts` and `comments` tables before Stage 6 realtime work |
-| 🟢 **Medium** | Handle `post-images` signed URLs (Stage 6) | Dev | `post-images` is a **private** bucket — feeds must call `supabase.storage.from('post-images').createSignedUrl()`, never public URLs |
-| � **Critical** | Run migration 006 manually in Supabase SQL Editor | Dev | Substitute `__APP_URL__` (your `.vercel.app` URL) and `__CRON_SECRET__` before running. Re-run with parish domain once it is live. Never commit real values. |
-| �🟢 **Medium** | Recurring events + cron (Stage 8) | Dev | The reminder cron scans `starts_at` only. A weekly event has one static `starts_at` + an `rrule`. Stage 8 must expand upcoming occurrences via the `rrule` lib before scanning, or recurring-event reminders fire once and stop |
-| 🟢 **Medium** | Set Vercel environment variables | Dev | Before first Vercel deploy |
-| 🟢 **Medium** | Upgrade Node.js to 22 LTS in Vercel settings | Dev | Suppress Supabase deprecation warning |
-| 🟢 **Medium** | Download + bundle Noto Sans Malayalam WOFF2 | Dev/Stage 7 | Replace CDN `<link>` with `next/font/local` |
-| 🟢 **Low** | Delete `C:\Users\user\package-lock.json` | Dev | Removes workspace root warning |
+### Confirm Done-For-Real
+| Item | Status |
+|---|---|
+| 2Factor API key rotated (old key was printed in earlier doc version) | Confirm: log in to app.2factor.in and verify old key is revoked |
+| GitHub repo set to Private | Confirm: github.com/Morpheus61/alleppey_marthoma Settings |
+| Node.js 22 set in Vercel project | Confirm: Vercel Dashboard Project Settings Node.js Version 22.x |
 
----
+### Remaining Blockers
+| Priority | Action | Notes |
+|---|---|---|
+| CRITICAL | DLT header + template registration (India) | Vilpower registration; unblocks production SMS OTP |
+| CRITICAL | Set TWOFACTOR_TEMPLATE_NAME in Vercel env | After DLT approval |
+| HIGH | Upload PWA icons to /public/icons/ | icon-192x192.png, icon-512x512.png, icon-maskable, apple-touch-icon.png |
+| HIGH | Run migration 010 in Supabase SQL Editor | push_subscriptions unique constraint + events soft-delete |
+| HIGH | Run migration 006 in Supabase SQL Editor | Substitute __APP_URL__ and __CRON_SECRET__ before running |
+| MEDIUM | Implement @serwist/next for offline PWA (Stage 8) | Replace minimal sw.js; delete DevTools SW FAQ from HOW_TO_USE when done |
+| MEDIUM | Push notification subscription UI + fanout (Stage 8) | VAPID keys generated; subscription prompt + /api/cron/reminders pending |
+| MEDIUM | Regenerate Supabase TypeScript types | npx supabase gen types typescript --project-id furbmmtqnrtaelryonlo |
+| MEDIUM | Download + bundle Noto Sans Malayalam WOFF2 (Stage 7) | Replace CDN link with next/font/local |
+| LOW | Enable Supabase Realtime for posts + comments | Dashboard Database Replication |
+| LOW | Add events soft-delete RLS policy | Mirror posts read policy: using (not is_deleted ...) |
 
 ## 23. Seed Data (Development)
 
@@ -1052,5 +1049,5 @@ To create the admin user: set `profiles.is_admin = true` via Supabase Dashboard 
 
 ---
 
-*This document reflects the codebase state as of the Stage 1 commit (`d43edc2`) on 2026-07-14.*
+*This document reflects the codebase state as of 2026-07-16. Stages 1-6 feature-complete. Footer updated (`d43edc2`) on 2026-07-14.*
 *Update this file at the completion of each build stage.*

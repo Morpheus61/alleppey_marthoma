@@ -116,32 +116,26 @@ Once the Admin approves you, you will have full access.
 
 ### Finding Your Group Management Page
 
-1. Go to **My Profile**
-2. Under "My Groups", you will see your group listed with a **"Leader"** badge
-3. Tap the group → this takes you to the Group Feed
-4. To manage the group, go to: `yourdomain.com/manage/your-group-name`
+1. Tap **Groups** in the navigation
+2. Find your group and tap it → opens the Group public page
+3. If you are a leader, a **“Manage Group”** button appears at the top
+4. Tap it to open the Management page
 
-*(The Admin can also give you the direct link to your management page)*
+Alternatively, go directly to: `alleppey-marthoma.vercel.app/manage/your-group-name`
 
 ---
 
 ### Posting a Bilingual Message to Your Group
 
 1. Open your Group Management page
-2. You will see the **“Post Message”** composer with two columns — English (left) and Malayalam (right)
-3. Write your **English message** in the left column (required)
-4. For the **Malayalam column**:
-   - Type Malayalam directly, OR
-   - Click **“Draft →”** to auto-convert your English text phonetically into Malayalam script
-   - ⚠️ The draft converts letters, NOT meaning — **rewrite it in proper Malayalam**
-5. Choose visibility:
-   - **Members only** — only group members can see this
-   - **Public** — anyone in the parish can see this
-6. Tick **“📌 Pin this post”** if it should stay at the top
-7. If you wrote Malayalam, **tick the review box**: “I have read the Malayalam text and it is correct”
-8. Tap **“Post to [Group Name]”**
-
-> The Post button stays greyed out until you tick the review box (if Malayalam is present). This prevents unreviewed auto-converted text from being published.**
+2. In the **“Post Message”** composer:
+   - Write **English** in the left column, OR **Malayalam** in the right column, OR **both**
+   - At least **one language** must have content — Malayalam-only posts are fully valid
+3. To convert English to Malayalam phonetically, click **“Draft →”**
+   - ⚠️ This converts letters, NOT meaning — rewrite the draft in proper Malayalam
+   - Tick the **“I have read the Malayalam”** box before proceeding
+4. Click **“Preview & Post →”**
+5. Review the exact feed card that members will see, then click **“Send”** to confirm
 
 ---
 
@@ -156,20 +150,23 @@ When a member requests to join your group, you will see a **"Join Requests"** se
 
 ### Managing Your Group's Members
 
-On the Manage Page, scroll down to see **"Active Members"**:
+On the Manage Page, scroll down to see **“Active Members”**:
 
-- **Appoint Leader** — make another member a co-leader of the group
-- **Revoke Leader** — remove leader role (they stay as a regular member)
-- **Remove** — remove a member from the group (they can request again later)
+| Button | What It Does |
+|---|---|
+| **Remove** | Removes them from the group (they can request to rejoin) |
+
+> **Note:** Only Admins can appoint or revoke Group Leaders. This is enforced at the database level.
 
 ---
 
 ### Things Group Leaders CANNOT Do
 
 - Create or delete groups (Admin only)
-- Change a member's name or phone number (Admin only)
+- Appoint or revoke Group Leaders (Admin only — enforced by database security)
+- Change a member’s name, phone number, or status (Admin only)
 - Approve new members for the parish (Admin only)
-- Access another group's management page
+- Access another group’s management page
 
 ---
 
@@ -263,12 +260,20 @@ To bring it back, tap **"Unarchive"**.
 ### Posting a Parish-Wide Bilingual Announcement
 
 1. Admin Dashboard → **“Post Announcement”**
-2. Write the **English message** in the left column
-3. Optionally add **Malayalam** in the right column (or use **“Draft →”** as a phonetic starting point)
-4. Choose the target: *All Members (Parish-wide)* or a specific group
-5. Choose visibility: Members only or Public
-6. If Malayalam is added, **tick the review box**
-7. Tap **“Post Announcement”**
+2. Write in **English** and/or **Malayalam** — at least one language is required
+3. Click **“Preview & Post →”** — review the rendered feed card
+4. Click **“Send”** to confirm
+
+---
+
+### Appointing a Group Leader
+
+1. Admin Dashboard → Groups → tap **Manage** for the relevant group
+2. Scroll to **“Members”**
+3. Find the member → tap **“Make Leader”**
+4. To remove leader status: tap **“Revoke Leader”**
+
+> Only Admins can appoint or revoke Group Leaders. This is enforced at the database level — group leaders cannot promote other members to leader.
 
 ---
 
@@ -332,10 +337,7 @@ A: Yes. Open it in Chrome, Edge, Safari, or Firefox. On desktop you get a sideba
 A: It converts your English text phonetically into Malayalam script (e.g. “Thomas” → “തോമസ്”). It does NOT translate meaning — you must rewrite the draft in proper Malayalam before posting.
 
 **Q: Is my personal data safe?**  
-A: Yes. The app uses Row Level Security (PostgreSQL). Your phone number and family details are only visible to approved parish members and admins. No data is shared outside the parish.
-
-**Q: The page shows an error when I open the app.**  
-A: Try: (1) Hard reload with Ctrl+Shift+R. (2) DevTools → Application → Service Workers → Unregister → then reload. This clears any stale cached version of the app.
+A: Yes. The app uses Row Level Security (PostgreSQL). Your phone number and family details are only visible to approved parish members and admins. **Date of birth, email and family members are never shown in the parish directory** — they are visible only to you and to Admins. No data is shared outside the parish.
 
 ---
 

@@ -195,14 +195,17 @@ export default async function ManagePage({ params }: Props) {
                 </div>
                 {!isCurrentUser && (
                   <div className="flex gap-1">
-                    {m.role === 'member' ? (
-                      <form action={appointLeader.bind(null, group.id, m.user_id)}>
-                        <button className={`${btn} bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200`}>Make Leader</button>
-                      </form>
-                    ) : (
-                      <form action={revokeLeader.bind(null, group.id, m.user_id)}>
-                        <button className={`${btn} bg-gray-100 text-gray-700 hover:bg-gray-200`}>Revoke</button>
-                      </form>
+                    {/* Appoint/Revoke leader: admin-only (matches RLS WITH CHECK) */}
+                    {isAdmin && (
+                      m.role === 'member' ? (
+                        <form action={appointLeader.bind(null, group.id, m.user_id)}>
+                          <button className={`${btn} bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200`}>Make Leader</button>
+                        </form>
+                      ) : (
+                        <form action={revokeLeader.bind(null, group.id, m.user_id)}>
+                          <button className={`${btn} bg-gray-100 text-gray-700 hover:bg-gray-200`}>Revoke Leader</button>
+                        </form>
+                      )
                     )}
                     <form action={removeMember.bind(null, group.id, m.user_id)}>
                       <button className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Remove</button>

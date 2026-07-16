@@ -73,8 +73,9 @@ export async function postAnnouncement(formData: FormData) {
 
   const title      = (formData.get('title')    as string | null)?.trim() || null
   const title_ml   = (formData.get('title_ml') as string | null)?.trim() || null
-  const body       = (formData.get('body')      as string).trim()
+  const bodyEn     = (formData.get('body')      as string)?.trim()
   const body_ml    = (formData.get('body_ml')  as string | null)?.trim() || null
+  const body       = bodyEn || body_ml || ''   // ML-only posts are valid
   const visibility = (formData.get('visibility') as 'members' | 'public') || 'members'
   const groupId    = (formData.get('group_id') as string | null) || null
 
