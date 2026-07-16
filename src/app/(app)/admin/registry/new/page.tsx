@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import NewHouseholdForm from './NewHouseholdForm'
+import NewHouseholdForm from '../NewHouseholdForm'
 
 export const metadata = { title: 'New Household' }
 
