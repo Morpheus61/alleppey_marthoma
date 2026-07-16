@@ -1,6 +1,6 @@
 # Alleppey Marthoma — System Definition
 ### St. George Marthoma Syrian Church Community PWA
-**Last Updated:** 2026-07-14 | **Build Stage:** 1 of 9 Complete
+**Last Updated:** 2026-07-16 | **Build Stage:** Stages 1–6 Feature-Complete
 
 ---
 
@@ -353,20 +353,42 @@ module.exports = {
 
 ## 8. Database Schema
 
-Applied via Supabase migrations (`/supabase/migrations/`). **Apply in order 001 → 005 via Supabase SQL Editor.**
+Applied via Supabase migrations (`/supabase/migrations/`). **Apply in order 001 → 009 via Supabase SQL Editor.**
+
+### Migration History
+| Migration | Description | Status |
+|---|---|---|
+| `001_initial_schema.sql` | Core tables + indexes + triggers | ✅ Applied |
+| `002_rls_policies.sql` | RLS enable + helper functions + all policies | ✅ Applied |
+| `003_auth_trigger.sql` | Auto-create profile on signup | ✅ Applied |
+| `004_storage_buckets.sql` | Storage buckets + RLS | ✅ Applied |
+| `005_seed_data.sql` | Dev seed — 6 sample groups | ✅ Applied |
+| `006_pg_cron_reminders.sql` | Supabase pg_cron event reminder fanout | ⚠️ Manual — substitute placeholders first |
+| `007_directory_fields.sql` | Extended profile columns for church directory | ✅ Applied |
+| `008_posts_bilingual.sql` | Add `title_ml`, `body_ml` to posts | ✅ Applied |
+| `009_profile_photos.sql` | Add `family_photo_url`; avatars admin/update RLS | ✅ Applied |
 
 ### Table: `profiles` (extends `auth.users`)
 ```sql
-id            uuid PRIMARY KEY  references auth.users ON DELETE CASCADE
-full_name     text NOT NULL
-full_name_ml  text                             -- optional Malayalam name
-phone         text UNIQUE NOT NULL             -- normalised E.164 (+91XXXXXXXXXX)
-house_name    text                             -- local identifier
-avatar_url    text
-ui_language   text DEFAULT 'en'  CHECK (ui_language IN ('en','ml'))
-is_admin      boolean DEFAULT false NOT NULL
-status        text DEFAULT 'pending'  CHECK (status IN ('pending','active','disabled'))
-created_at    timestamptz DEFAULT now() NOT NULL
+id                uuid PRIMARY KEY  references auth.users ON DELETE CASCADE
+full_name         text NOT NULL
+full_name_ml      text                             -- optional Malayalam name
+phone             text UNIQUE NOT NULL             -- normalised E.164 (+91XXXXXXXXXX)
+house_name        text                             -- local identifier
+avatar_url        text                             -- Supabase Storage: avatars/{user_id}/avatar.jpg
+family_photo_url  text                             -- Supabase Storage: avatars/{user_id}/family.jpg
+ui_language       text DEFAULT 'en'  CHECK (ui_language IN ('en','ml'))
+is_admin          boolean DEFAULT false NOT NULL
+status            text DEFAULT 'pending'  CHECK (status IN ('pending','active','disabled'))
+created_at        timestamptz DEFAULT now() NOT NULL
+-- Added by migration 007 (directory fields):
+date_of_birth     date
+address           text
+phone_landline    text
+whatsapp_number   text
+is_mobile_whatsapp boolean DEFAULT true NOT NULL
+email             text
+family_members    jsonb DEFAULT '[]' NOT NULL      -- array of {name, name_ml, dob, relation}
 ```
 
 ### Table: `groups`
@@ -398,8 +420,10 @@ PRIMARY KEY (group_id, user_id)
 id          uuid PRIMARY KEY  DEFAULT gen_random_uuid()
 group_id    uuid  references groups ON DELETE CASCADE   -- NULL = parish-wide
 author_id   uuid  references profiles NOT NULL
-title       text
-body        text NOT NULL                               -- Malayalam, English, or mixed
+title       text                                        -- English title
+title_ml    text                                        -- Malayalam title (migration 008)
+body        text NOT NULL                               -- English body
+body_ml     text                                        -- Malayalam body (migration 008)
 visibility  text DEFAULT 'members'  CHECK (visibility IN ('members','public'))
 image_urls  text[] DEFAULT '{}'
 is_pinned   boolean DEFAULT false NOT NULL
@@ -572,18 +596,20 @@ All routes confirmed built and compiled clean as of Stage 1.
 
 | Route | Type | Auth Required | Description |
 |---|---|---|---|
-| `/` | Server (Dynamic) | Active member | Home: announcements + calendar stub |
+| `/` | Server (Dynamic) | Active member | Home: announcements + upcoming events |
 | `/auth/login` | Client Component | No | Phone OTP login form |
 | `/auth/pending` | Server | Pending user | Awaiting approval screen |
 | `/auth/disabled` | Server | Disabled user | Account disabled screen |
-| `/groups` | Server | Authenticated | Groups directory (members-only; non-members redirected to login) |
-| `/groups/[slug]` | Server | Authenticated | Group page (members-only; description, leaders, events) |
-| `/groups/[slug]/feed` | Server | Active member | Member-only post feed |
-| `/groups/[slug]/calendar` | — | — | *(Stage 3 — not yet built)* |
-| `/calendar` | Server | Authenticated | Combined parish calendar (public events) |
-| `/me` | Server | Active member | Profile, groups, settings |
-| `/admin` | Server | `is_admin=true` | Vicar dashboard |
-| `/manage/[slug]` | Server | Leader or admin | Group leader dashboard |
+| `/groups` | Server | Authenticated | Groups directory |
+| `/groups/[slug]` | Server | Authenticated | Group public page (leaders, events) |
+| `/groups/[slug]/feed` | Server | Active member | Member-only post feed (bilingual) |
+| `/calendar` | Server | Authenticated | Combined parish calendar |
+| `/directory` | Server | Active member | Parish directory with photos + search; admin CRUD |
+| `/directory/[id]` | Server | Admin only | Full profile edit form |
+| `/me` | Server | Active member | Profile + photos + family members + groups |
+| `/admin` | Server | `is_admin=true` | Vicar dashboard — approvals, groups, bilingual announcements |
+| `/manage/[slug]` | Server | Leader or admin | Group leader dashboard — bilingual posts, members |
+| `/api/transliterate` | Route Handler | None (proxied) | Google Input Tools transliteration proxy |
 | `/api/cron/reminders` | Route Handler | `CRON_SECRET` header | Push reminder fanout (Stage 8) |
 
 ### Proxy (Middleware) Config
@@ -740,11 +766,20 @@ borderRadius: { DEFAULT: 0.5rem }
 |---|---|---|---|---|
 | `post-images` | ❌ Private | 5 MB | jpeg, png, webp, gif | Post photo attachments |
 | `group-covers` | ✅ Public | 5 MB | jpeg, png, webp | Group page cover images |
-| `avatars` | ✅ Public | 2 MB | jpeg, png, webp | User profile photos |
+| `avatars` | ✅ Public | 2 MB | jpeg, png, webp | Profile pics + family photos |
 
-**Client-side compression:** images are compressed to max ~1600px / ~300KB using `browser-image-compression` before upload.
+**Client-side compression:** images are compressed before upload using `browser-image-compression`:
+- Profile picture: max 600px / 300 KB → stored at `{user_id}/avatar.jpg`
+- Family photo: max 1200px / 500 KB → stored at `{user_id}/family.jpg`
 
-**Naming convention for avatars:** `{user_id}/{filename}` (enforced by RLS — users can only upload to their own folder).
+**Naming convention for avatars:** `{user_id}/{type}.jpg` where type is `avatar` or `family`. Enforced by RLS — users can only upload to their own folder. Admins can upload to any folder (migration 009 adds admin override policy).
+
+**`avatars` bucket RLS policies:**
+- `avatars: public read` — anyone can read
+- `avatars: own insert` — user can only insert to their own `{user_id}/` folder
+- `avatars: admin insert` — admin can insert to any path *(added migration 009)*
+- `avatars: own update` — user can upsert their own files *(added migration 009)*
+- `avatars: admin update` — admin can upsert any file *(added migration 009)*
 
 ---
 
@@ -917,12 +952,12 @@ npx playwright test  # Run E2E tests
 |---|---|---|---|
 | **1** | Scaffold + Supabase schema + RLS + RLS tests | ✅ **Complete** | Build clean, committed to GitHub |
 | **2** | Auth flow (OTP, pending approval, sessions) | ✅ **Complete** | Included in Stage 1 commit |
-| **3** | Groups directory + public pages + calendar | ✅ **Stub complete** | Basic read-only pages built; full layout Stage 3 |
-| **4** | Admin dashboard | 🔲 Not started | Member approval, group creation, leader appoint, DnD member assignment |
-| **5** | Leader dashboard + post composer | 🔲 Not started | Preview-before-post, event creation, recurrence |
-| **6** | Member feed (realtime) | 🔲 Not started | Posts, comments, RSVPs, Supabase Realtime |
-| **7** | i18n pass + local font bundling | 🔲 Not started | Full ml.json review, local WOFF2 fonts, language toggle |
-| **8** | PWA + Push notifications + cron | 🔲 Not started | @serwist/next, VAPID, subscription fanout, iOS install flow |
+| **3** | Groups directory + public pages + calendar | ✅ **Complete** | Fixed Next.js 16 async params issue; groups, feed, manage pages all working |
+| **4** | Admin dashboard | ✅ **Complete** | Member approval, group CRUD, parish announcements, member management, bulk import |
+| **5** | Leader dashboard + post composer | ✅ **Complete** | BilingualPostComposer with Draft→ + review-gate; pin, visibility, manage page |
+| **6** | Directory + profile CRUD + photos | ✅ **Complete** | Full CRUD, photo upload (avatar + family), disable/reactivate, responsive layout |
+| **7** | i18n pass + local font bundling | 🔲 **Partial** | English + Malayalam strings done; local WOFF2 font bundling pending |
+| **8** | PWA + Push notifications + cron | 🔲 **Partial** | Service Worker updated (cache-busting); VAPID keys generated; push fanout and @serwist/next pending |
 | **9** | Polish — empty states, skeletons, a11y | 🔲 Not started | Lighthouse PWA ≥ 90, a11y audit |
 
 ---
@@ -946,16 +981,30 @@ npx playwright test  # Run E2E tests
 ### ④ Supabase TypeScript Generics
 **Cause:** `@supabase/supabase-js@2.110.4` type inference requires CLI-generated types; hand-written `Database` interface causes `never` types.  
 **Workaround:** `Database` generic removed from `createServerClient`. Manual `as Profile | null` casts used in every server page.  
-**Fix (Stage 4):** Run `npx supabase gen types typescript --project-id nsuxmlbrehmqdwogkjwr > src/types/database.ts` to regenerate proper types.
+**Fix (Stage 9):** Run `npx supabase gen types typescript --project-id nsuxmlbrehmqdwogkjwr > src/types/database.ts` to regenerate proper types.
 
 ### ⑤ Google Fonts Unreachable at Build Time
 **Cause:** Build machine cannot reach `fonts.googleapis.com`.  
 **Workaround:** Switched from `next/font/google` to HTML `<link>` tag in `layout.tsx`. Fonts load at runtime from CDN.  
 **Fix (Stage 7):** Download WOFF2 files and use `next/font/local` with files in `/public/fonts/`.
 
-### ⑥ `@types/minimatch` Stub
-**Cause:** `@types/minimatch@6.0.0` is a stub that points to `minimatch`'s own types, but `minimatch@3.1.5` (installed) has no bundled types.  
-**Workaround:** Added `"types": ["node"]` to `tsconfig.json` to prevent auto-inclusion of the broken stub.
+### ⑥ Next.js 16 Async Params (RESOLVED ✅)
+**Cause:** Next.js 15+ changed `params` to a Promise. Dynamic routes (`[slug]`, `[id]`) were using sync access causing runtime crashes.  
+**Fix Applied:** All dynamic route pages now use `const { slug } = await params` pattern.
+
+### ⑦ Event Handlers Cannot Be Passed to Client Components (RESOLVED ✅)
+**Cause:** Inline `onSubmit` on a `<form>` inside a Server Component is not serializable in the RSC payload.  
+**Error:** `digest: '2652971450'` on `/directory`  
+**Fix Applied:** Extracted confirm-dialog form into `DisableMemberButton.tsx` (`'use client'`).
+
+### ⑧ Stale Service Worker Cache
+**Cause:** Old service worker (with fetch handler) cached pages and served stale RSC responses.  
+**Symptom:** Pages show wrong/404 content despite 200 HTTP status.  
+**Fix Applied:** `sw.js` updated to clear all old caches on activate and removed no-op fetch handler. Cache version bumped to `sgm-v2`.
+
+### ⑨ Profile Data Not Saving (RESOLVED ✅)
+**Cause:** Migration 007 (`date_of_birth`, `address`, `phone_landline`, `is_mobile_whatsapp`, `email`, `family_members` columns) was not applied to production Supabase. The update payload referenced non-existent columns and failed silently.
+**Fix Applied:** Migration 007 applied. Error surfacing added to `updateMyProfile` action and `MemberForm` component.
 
 ---
 
