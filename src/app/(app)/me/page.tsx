@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { Profile, GroupMembership, Group } from '@/types/database'
-import MemberForm from '@/components/directory/MemberForm'
+import ProfileCard from '@/components/directory/ProfileCard'
 import { updateMyProfile, updateMyPhoto } from './actions'
 
 export const metadata = { title: 'My Profile' }
@@ -53,15 +53,12 @@ export default async function ProfilePage() {
         </section>
       )}
 
-      {/* Edit Profile Form */}
-      <section>
-        <h2 className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-4">Edit My Details</h2>
-        <MemberForm
-          profile={profile}
-          action={updateMyProfile}
-          onPhotoUpload={updateMyPhoto}
-        />
-      </section>
+      {/* Profile — view mode by default; Edit button reveals form */}
+      <ProfileCard
+        profile={profile}
+        action={updateMyProfile}
+        onPhotoUpload={updateMyPhoto}
+      />
 
     </div>
   )

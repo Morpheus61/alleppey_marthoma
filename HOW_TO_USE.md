@@ -60,6 +60,7 @@ Once the Admin approves you, you will have full access.
 | 👥 **Groups** | List of all parish groups |
 | 📖 **Directory** | Full parish member directory with photos |
 | 📅 **Calendar** | Upcoming church events and services |
+| 👛 **Finance** | Your subscriptions, payment history, active collections |
 | 👤 **Profile** | Your personal profile, photos and family details |
 | 🛡 **Admin** | Admin Dashboard *(visible to admins only)* |
 
@@ -279,7 +280,7 @@ To bring it back, tap **"Unarchive"**.
 
 ### The Vicar’s Admin Access
 
-The Vicar signs in with their mobile number (OTP) like any other member. The app recognises them as **Super Admin** via the  table.
+The Vicar signs in with their mobile number (OTP) like any other member. The app recognises them as **Super Admin** via the `parish_roles` table.
 
 To grant the Vicar access after they first register: **Admin → Roles → Select name → Vicar (Super Admin) → Grant Role**
 
@@ -299,7 +300,7 @@ To grant the Vicar access after they first register: **Admin → Roles → Selec
 ### Bulk Importing Members
 
 1. Go to **Directory → Import Members** panel
-2. Prepare CSV/Excel: columns , , 
+2. Prepare CSV/Excel: columns `full_name`, `phone`, `house_name`
 3. Upload the file
 4. Members created as **pending** — auto-activated on first login
 
