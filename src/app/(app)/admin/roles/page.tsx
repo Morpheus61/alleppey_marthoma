@@ -69,7 +69,7 @@ export default async function RolesPage() {
                   <p className="text-[10px] text-muted-foreground mt-1">{label.description}</p>
                 </div>
                 {r.profile_id !== user.id && (
-                  <form action={revokeRole.bind(null, r.id)}>
+                  <form action={async () => { await revokeRole(r.id) }}>
                     <button className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Revoke</button>
                   </form>
                 )}
