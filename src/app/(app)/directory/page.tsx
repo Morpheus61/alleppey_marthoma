@@ -56,6 +56,15 @@ export default async function DirectoryPage({ searchParams }: Props) {
   const waNumber = (m: Partial<Profile>) =>
     m.is_mobile_whatsapp ? m.phone : (m.whatsapp_number ?? null)
 
+  /** Build a wa.me URL from any phone format stored in DB.
+   *  Strips leading + or double-91 prefix, always produces +91XXXXXXXXXX */
+  const waUrl = (raw: string): string => {
+    const digits = raw.replace(/\D/g, '')         // strip non-digits
+    // normalise: 12-digit 91XXXXXXXXXX → keep; 10-digit → prepend 91
+    const e164 = digits.startsWith('91') && digits.length === 12 ? digits : `91${digits.slice(-10)}`
+    return `https://wa.me/${e164}`
+  }
+
   return (
     <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-6 space-y-5">
 
@@ -128,7 +137,7 @@ export default async function DirectoryPage({ searchParams }: Props) {
                     {myProfile.is_admin && (
                       <div className="flex items-center gap-2 shrink-0">
                         {wa && (
-                          <a href={`https://wa.me/91${wa}`} target="_blank" rel="noopener noreferrer"
+                          <a href={waUrl(wa)} target="_blank" rel="noopener noreferrer"
                             className="text-green-600 hover:text-green-700" title={`WhatsApp ${wa}`}>
                             <MessageCircle size={18} />
                           </a>
