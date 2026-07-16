@@ -49,7 +49,7 @@ export default async function AdminPage() {
   const btn   = 'text-xs font-semibold px-3 py-1.5 rounded-lg min-h-[36px] transition-colors'
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+    <div className="max-w-2xl md:max-w-5xl mx-auto px-4 py-6 space-y-8">
 
       {/* ── Page title ── */}
       <div>

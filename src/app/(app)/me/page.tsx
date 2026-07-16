@@ -24,7 +24,7 @@ export default async function ProfilePage() {
   const memberships = membershipData as (Pick<GroupMembership,'role'|'status'> & { groups: Pick<Group,'id'|'slug'|'name'|'name_ml'> | null })[] | null
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-lg md:max-w-2xl mx-auto px-4 py-6 space-y-6">
 
       <h1 className="text-2xl font-bold text-brand-900">My Profile</h1>
 

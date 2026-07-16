@@ -30,7 +30,7 @@ export default async function MemberEditPage({ params }: Props) {
   const updateAction = adminUpdateProfile.bind(null, id)
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
+    <div className="max-w-lg md:max-w-2xl mx-auto px-4 py-6 space-y-5">
       <div>
         <Link href="/directory" className="text-xs text-muted-foreground hover:text-foreground mb-3 block">← Back to Directory</Link>
         <h1 className="text-2xl font-bold text-brand-900">Edit Member</h1>

@@ -31,11 +31,11 @@ export default function HeaderNav({ isAdmin }: Props) {
 
   return (
     <header className="sticky top-0 z-40 bg-[#fdf6eb] border-b border-amber-100 shadow-sm">
-      <div className="flex items-center gap-2 px-3 py-2 max-w-lg mx-auto min-h-[52px]">
+      <div className="flex items-center gap-2 px-3 py-2 max-w-full min-h-[52px]">
 
-        {/* Left: back button OR logo */}
+        {/* Left: back button OR logo (logo hidden on desktop — sidebar shows it) */}
         {isRoot ? (
-          <Link href="/" aria-label="Home" className="shrink-0">
+          <Link href="/" aria-label="Home" className="shrink-0 md:hidden">
             <Image
               src="/MarThoma_logo.png"
               alt="St. George Marthoma Church"

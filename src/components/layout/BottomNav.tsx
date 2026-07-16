@@ -20,7 +20,7 @@ export default function BottomNav({ isAdmin }: { isAdmin: boolean }) {
     : items
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-amber-100 safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-amber-100 safe-area-pb md:hidden">
       <div className="flex items-stretch justify-around max-w-lg mx-auto">
         {allItems.map(({ href, icon: Icon, label }) => {
           const active = href === '/' ? pathname === '/' : pathname.startsWith(href)

@@ -39,7 +39,7 @@ export default async function HomePage() {
   const firstName = p.full_name.split(' ')[0]
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-lg md:max-w-3xl mx-auto px-4 py-6 space-y-6">
 
       {/* ── Welcome banner ── */}
       <div className="rounded-2xl bg-brand-900 text-white px-5 py-5 shadow-lg">

@@ -56,7 +56,7 @@ export default async function ManagePage({ params }: Props) {
   const btn = 'text-xs font-semibold px-3 py-1.5 rounded-lg min-h-[36px] transition-colors'
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-7">
+    <div className="max-w-lg md:max-w-3xl mx-auto px-4 py-6 space-y-7">
 
       {/* ── Header ── */}
       <div>

@@ -52,7 +52,7 @@ export default async function DirectoryPage({ searchParams }: Props) {
     m.is_mobile_whatsapp ? m.phone : (m.whatsapp_number ?? null)
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
+    <div className="max-w-lg md:max-w-4xl mx-auto px-4 py-6 space-y-5">
 
       <div>
         <h1 className="text-2xl font-bold text-brand-900">Church Directory</h1>

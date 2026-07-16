@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
 import InstallPrompt from '@/components/layout/InstallPrompt'
 import HeaderNav from '@/components/layout/HeaderNav'
+import SidebarNav from '@/components/layout/SidebarNav'
 import type { Profile } from '@/types/database'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -21,20 +22,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (profile.status === 'pending') redirect('/auth/pending')
   if (profile.status !== 'active') redirect('/auth/disabled')
 
+  const isAdmin = profile.is_admin ?? false
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#f9f0e3]">
-      {/* ── Branded header with back button + sign out ── */}
-      <HeaderNav isAdmin={profile.is_admin ?? false} />
+    <div className="min-h-screen bg-[#f9f0e3]">
+      {/* ── Top header — visible on all screen sizes ── */}
+      <HeaderNav isAdmin={isAdmin} />
 
-      {/* ── Page content ── */}
-      <main className="flex-1 pb-20 overflow-y-auto">
-        {children}
-      </main>
+      {/* ── Body: sidebar (desktop) + content ── */}
+      <div className="md:flex">
+        {/* Desktop sidebar — hidden on mobile */}
+        <SidebarNav isAdmin={isAdmin} />
 
-      {/* ── Bottom navigation ── */}
-      <BottomNav isAdmin={profile.is_admin ?? false} />
+        {/* Page content */}
+        <main className="flex-1 pb-20 md:pb-8 min-h-[calc(100vh-52px)] overflow-y-auto">
+          {children}
+        </main>
+      </div>
 
-      {/* ── PWA Install prompt ── */}
+      {/* ── Bottom nav — mobile only ── */}
+      <BottomNav isAdmin={isAdmin} />
+
+      {/* ── PWA install prompt ── */}
       <InstallPrompt />
     </div>
   )
