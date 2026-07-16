@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
-import { Home, Users, Calendar, User, BookOpen, ShieldCheck } from 'lucide-react'
+import { Home, Users, Calendar, User, BookOpen, ShieldCheck, Wallet } from 'lucide-react'
 
 const baseItems = [
   { href: '/',          icon: Home,        label: 'Home'      },
   { href: '/groups',    icon: Users,       label: 'Groups'    },
   { href: '/directory', icon: BookOpen,    label: 'Directory' },
   { href: '/calendar',  icon: Calendar,    label: 'Calendar'  },
+  { href: '/finance',   icon: Wallet,      label: 'Finance'   },
   { href: '/me',        icon: User,        label: 'Profile'   },
 ]
 
