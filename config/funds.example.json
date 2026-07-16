@@ -1,0 +1,37 @@
+{
+  "_instructions": "Fill in with the Vicar/Treasurer. Run `npm run import:funds` after editing. ⛪CONFIG-2",
+  "funds": [
+    {
+      "name": "General Fund",
+      "name_ml": "പൊതു ഫണ്ട്",
+      "description": "General parish operations and maintenance",
+      "bank_account_label": "",
+      "_note": "Replace with actual fund name"
+    },
+    {
+      "name": "Building Fund",
+      "name_ml": "കെട്ടിട ഫണ്ട്",
+      "description": "Church building maintenance and improvements",
+      "_note": "Remove if not applicable"
+    }
+  ],
+  "contribution_types": [
+    {
+      "fund": "General Fund",
+      "name": "Masavari",
+      "name_ml": "മസവരി",
+      "kind": "subscription",
+      "amount_mode": "fixed",
+      "amount": 0,
+      "_note": "⛪CONFIG-2: Set amount from Vicar. kind=subscription means monthly"
+    },
+    {
+      "fund": "General Fund",
+      "name": "Sunday Offertory",
+      "name_ml": "ഞായർ വഴിപ്പാട്",
+      "kind": "service_offertory",
+      "amount_mode": "open",
+      "_note": "Day-total entry only — no per-member tracking"
+    }
+  ]
+}

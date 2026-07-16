@@ -1,0 +1,30 @@
+{
+  "_instructions": "Fill in correct Malayalam spellings and English names with the Vicar/church office. Run `npm run import:bhagams` after editing. Malayalam name is the PRIMARY field.",
+  "_church_config": "⛪CONFIG-1",
+  "bhagams": [
+    {
+      "slug": "bhagam-1",
+      "name_ml": "ഭാഗം ഒന്ന്",
+      "name": "Ward 1 (North)",
+      "_note": "Replace with actual Malayalam ward name"
+    },
+    {
+      "slug": "bhagam-2",
+      "name_ml": "ഭാഗം രണ്ട്",
+      "name": "Ward 2 (South)",
+      "_note": "Replace with actual Malayalam ward name"
+    },
+    {
+      "slug": "bhagam-3",
+      "name_ml": "ഭാഗം മൂന്ന്",
+      "name": "Ward 3 (East)",
+      "_note": "Replace with actual Malayalam ward name"
+    },
+    {
+      "slug": "bhagam-4",
+      "name_ml": "ഭാഗം നാല്",
+      "name": "Ward 4 (West)",
+      "_note": "Replace with actual Malayalam ward name"
+    }
+  ]
+}

@@ -321,3 +321,143 @@ export type Comment = Database['public']['Tables']['comments']['Row']
 export type Event = Database['public']['Tables']['events']['Row']
 export type EventRsvp = Database['public']['Tables']['event_rsvps']['Row']
 export type PushSubscription = Database['public']['Tables']['push_subscriptions']['Row']
+
+// ── Wave 2: Parish Role System ────────────────────────────────────────────────
+
+export type ParishRoleKind = 'deacon' | 'treasurer' | 'admin' | 'super_admin'
+
+export interface ParishRole {
+  id:          string
+  profile_id:  string
+  role:        ParishRoleKind
+  assigned_by: string
+  assigned_at: string
+  revoked_by:  string | null
+  revoked_at:  string | null
+}
+
+export interface ChangeRequest {
+  id:             string
+  target_table:   string
+  target_id:      string | null
+  change_type:    'insert' | 'update' | 'delete' | 'reversal'
+  current_data:   Json | null
+  proposed_data:  Json
+  requested_by:   string
+  status:         'pending' | 'approved' | 'rejected'
+  reviewed_by:    string | null
+  reviewed_at:    string | null
+  review_remarks: string | null
+  created_at:     string
+}
+
+export interface AuditLog {
+  id:           string
+  actor_id:     string | null
+  action:       string
+  target_table: string | null
+  target_id:    string | null
+  details:      Json | null
+  created_at:   string
+}
+
+// ── Wave 2: Parish Registry ───────────────────────────────────────────────────
+
+export interface FamilyUnit {
+  id:              string
+  house_name:      string
+  house_name_ml:   string | null
+  address:         string | null
+  prayer_group_id: string
+  created_at:      string
+  updated_at:      string
+}
+
+export interface FamilyMemberRow {  // renamed from FamilyMember to avoid clash with existing interface
+  id:               string
+  family_id:        string
+  profile_id:       string | null
+  full_name:        string
+  full_name_ml:     string | null
+  relation_to_head: string | null
+  date_of_birth:    string | null
+  gender:           'male' | 'female' | 'other' | null
+  is_deceased:      boolean
+  notes:            string | null
+  created_at:       string
+  updated_at:       string
+}
+
+export interface LifeEvent {
+  id:                 string
+  family_member_id:   string
+  event_type:         'baptism' | 'confirmation' | 'marriage' | 'death' | 'other'
+  event_date:         string
+  place:              string | null
+  officiant:          string | null
+  register_number:    string | null
+  certificate_number: string | null
+  remarks:            string | null
+  recorded_by:        string
+  superseded_by:      string | null
+  created_at:         string
+}
+
+export interface AppSetting {
+  key:         string
+  value:       string
+  description: string | null
+  updated_by:  string | null
+  updated_at:  string
+}
+
+// ── Wave 2: Finance ───────────────────────────────────────────────────────────
+
+export interface Fund {
+  id:                  string
+  name:                string
+  name_ml:             string | null
+  description:         string | null
+  bank_account_label:  string | null
+  is_active:           boolean
+  created_by:          string
+  created_at:          string
+}
+
+export interface ContributionType {
+  id:                string
+  fund_id:           string
+  name:              string
+  name_ml:           string | null
+  kind:              'subscription' | 'service_offertory' | 'appeal'
+  amount_mode:       'fixed' | 'suggested' | 'open'
+  amount:            number | null
+  period_start:      string | null
+  period_end:        string | null
+  service_event_id:  string | null
+  target_amount:     number | null
+  target_visibility: 'parish' | 'office'
+  is_active:         boolean
+  created_by:        string
+  created_at:        string
+}
+
+export interface ContributionEntry {
+  id:                   string
+  contribution_type_id: string
+  family_id:            string
+  member_id:            string | null
+  amount:               number
+  channel:              'upi_declared' | 'cash' | 'neft_declared'
+  period_month:         string | null
+  utr:                  string | null
+  screenshot_path:      string | null
+  status:               'submitted' | 'verified' | 'rejected' | 'reversed'
+  receipt_number:       string | null
+  recorded_by:          string
+  verified_by:          string | null
+  verified_at:          string | null
+  reject_reason:        string | null
+  reversal_of:          string | null
+  created_at:           string
+}
