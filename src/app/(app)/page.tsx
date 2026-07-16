@@ -10,21 +10,23 @@ export default async function HomePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const { data: profileData, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  if (profileErr) console.error('[HomePage] profile error:', profileErr.message, profileErr.code)
   const p = profileData as Profile | null
   if (!p || p.status === 'pending') redirect('/auth/pending')
   if (p.status !== 'active') redirect('/auth/disabled')
 
   // Fetch upcoming events (next 5)
-  const { data: events } = await supabase
+  const { data: events, error: eventsErr } = await supabase
     .from('events')
     .select('id, title, starts_at, venue, visibility')
     .gte('starts_at', new Date().toISOString())
     .order('starts_at')
     .limit(5)
+  if (eventsErr) console.error('[HomePage] events error:', eventsErr.message, eventsErr.code)
 
   // Fetch recent parish announcements (group_id IS NULL)
-  const { data: announcements } = await supabase
+  const { data: announcements, error: annoErr } = await supabase
     .from('posts')
     .select('id, title, body, created_at, is_pinned')
     .is('group_id', null)
@@ -32,6 +34,7 @@ export default async function HomePage() {
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(3)
+  if (annoErr) console.error('[HomePage] announcements error:', annoErr.message, annoErr.code)
 
   const firstName = p.full_name.split(' ')[0]
 

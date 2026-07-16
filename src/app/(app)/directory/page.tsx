@@ -2,11 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Search, Pencil, MessageCircle, UserX, UserCheck } from 'lucide-react'
+import { Search, Pencil, MessageCircle, UserCheck } from 'lucide-react'
 import type { Profile } from '@/types/database'
 import ImportPanel from './ImportPanel'
 import AddMemberForm from '@/components/directory/AddMemberForm'
 import { disableMember, reactivateMember } from './actions'
+import DisableMemberButton from '@/components/directory/DisableMemberButton'
 
 export const metadata = { title: 'Church Directory' }
 
@@ -28,7 +29,7 @@ export default async function DirectoryPage({ searchParams }: Props) {
 
   let query = supabase
     .from('profiles')
-    .select('id, full_name, full_name_ml, phone, house_name, avatar_url, is_admin, whatsapp_number, is_mobile_whatsapp, date_of_birth, address, email, status')
+    .select('id, full_name, full_name_ml, phone, house_name, avatar_url, family_photo_url, is_admin, whatsapp_number, is_mobile_whatsapp, date_of_birth, address, email, status')
     .in('status', myProfile.is_admin ? ['active', 'disabled'] : ['active'])
     .order('full_name')
 
@@ -83,46 +84,57 @@ export default async function DirectoryPage({ searchParams }: Props) {
             {grouped[letter].map(m => {
               const wa = waNumber(m)
               return (
-                <div key={m.id} className="flex items-center gap-3 bg-white rounded-xl border border-amber-50 px-4 py-3 shadow-sm">
-                  {/* Avatar */}
-                  <div className="shrink-0 w-12 h-12 rounded-full overflow-hidden bg-brand-100 flex items-center justify-center">
-                    {m.avatar_url ? (
-                      <Image src={m.avatar_url} alt={m.full_name ?? ''} width={48} height={48} className="object-cover w-full h-full" />
-                    ) : (
-                      <span className="text-brand-900 font-bold text-lg">{(m.full_name ?? '?')[0].toUpperCase()}</span>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">
-                      {m.full_name}
-                      {m.is_admin && <span className="ml-2 text-[10px] bg-brand-900 text-white px-1.5 py-0.5 rounded-full font-bold">Admin</span>}
-                    </p>
-                    {m.full_name_ml && <p className="text-xs text-muted-foreground font-malayalam truncate" lang="ml">{m.full_name_ml}</p>}
-                    {m.house_name && <p className="text-xs text-muted-foreground truncate">{m.house_name}</p>}
-                    {myProfile.is_admin && m.address && <p className="text-[11px] text-muted-foreground truncate">{m.address}</p>}
-                  </div>
-
-                  {/* Admin actions */}
-                  {myProfile.is_admin && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      {wa && (
-                        <a href={`https://wa.me/91${wa}`} target="_blank" rel="noopener noreferrer"
-                          className="text-green-600 hover:text-green-700" title={`WhatsApp ${wa}`}>
-                          <MessageCircle size={18} />
-                        </a>
-                      )}
-                      <Link href={`/directory/${m.id}`} className="text-amber-600 hover:text-amber-800" title="Edit member">
-                        <Pencil size={16} />
-                      </Link>
-                      <form action={disableMember.bind(null, m.id!)} onSubmit={(e) => { if (!confirm(`Disable ${m.full_name}? They will lose app access.`)) e.preventDefault() }}>
-                        <button type="submit" className="text-red-400 hover:text-red-600" title="Disable member">
-                          <UserX size={16} />
-                        </button>
-                      </form>
+                <div key={m.id} className="bg-white rounded-xl border border-amber-50 shadow-sm overflow-hidden">
+                  {/* Family photo — full-width banner if available */}
+                  {m.family_photo_url && (
+                    <div className="relative w-full h-32 bg-brand-50">
+                      <Image
+                        src={m.family_photo_url}
+                        alt={`${m.full_name} family`}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
                     </div>
                   )}
+
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {/* Profile pic (avatar) — small circle */}
+                    <div className="shrink-0 w-11 h-11 rounded-full overflow-hidden bg-brand-100 border-2 border-white shadow-sm flex items-center justify-center">
+                      {m.avatar_url ? (
+                        <Image src={m.avatar_url} alt={m.full_name ?? ''} width={44} height={44} className="object-cover w-full h-full" unoptimized />
+                      ) : (
+                        <span className="text-brand-900 font-bold text-base">{(m.full_name ?? '?')[0].toUpperCase()}</span>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">
+                        {m.full_name}
+                        {m.is_admin && <span className="ml-2 text-[10px] bg-brand-900 text-white px-1.5 py-0.5 rounded-full font-bold">Admin</span>}
+                      </p>
+                      {m.full_name_ml && <p className="text-xs text-muted-foreground font-malayalam truncate" lang="ml">{m.full_name_ml}</p>}
+                      {m.house_name && <p className="text-xs text-muted-foreground truncate">{m.house_name}</p>}
+                      {myProfile.is_admin && m.address && <p className="text-[11px] text-muted-foreground truncate">{m.address}</p>}
+                    </div>
+
+                    {/* Admin actions */}
+                    {myProfile.is_admin && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {wa && (
+                          <a href={`https://wa.me/91${wa}`} target="_blank" rel="noopener noreferrer"
+                            className="text-green-600 hover:text-green-700" title={`WhatsApp ${wa}`}>
+                            <MessageCircle size={18} />
+                          </a>
+                        )}
+                        <Link href={`/directory/${m.id}`} className="text-amber-600 hover:text-amber-800" title="Edit member">
+                          <Pencil size={16} />
+                        </Link>
+                        <DisableMemberButton memberId={m.id!} memberName={m.full_name ?? 'this member'} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
