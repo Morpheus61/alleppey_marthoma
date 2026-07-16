@@ -79,7 +79,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      {/* ── Stats ── */}}
+      {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Active Members',  value: totalMembers  ?? 0 },
