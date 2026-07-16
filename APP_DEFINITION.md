@@ -22,7 +22,10 @@ The app replaces paper directories, WhatsApp broadcast chaos, and phone-call cha
 |---|---|
 | **Parish Members** | All baptised members and family households |
 | **Group Leaders** | Prayer group leaders, youth coordinators, committee heads |
-| **Admin (Vicar / Office)** | Church Vicar, Secretary, or designated office staff |
+| **Deacon** | Ward/Bhagam deacon — records cash contributions, views arrears |
+| **Treasurer** | Verifies UPI/NEFT payments, finance dashboard, proposes reversals |
+| **Admin / Secretary** | Church Secretary — manages members, groups, announcements, events |
+| **Super Admin / Vicar** | The Vicar — full access, approves all change requests, grants all roles |
 
 ---
 
@@ -33,26 +36,45 @@ The app replaces paper directories, WhatsApp broadcast chaos, and phone-call cha
 - **My Profile** — save your full name (English & Malayalam), house name, address, date of birth, phone numbers, email, and family members
 - **Profile Photo** — upload your own profile picture (round avatar)
 - **Family Photo** — upload a household family photo (shown in the Parish Directory)
-- **Parish Directory** — browse and search all active parish members with photos
-- **Parish Calendar** — view upcoming services, events, and programmes
+- **Parish Directory** — browse and search all active parish members, sectioned by Bhagam (ward)
+- **Parish Calendar** — view upcoming services, events, and prayer meetings
 - **Groups** — see all parish groups (prayer groups, youth fellowship, committees, etc.)
 - **Group Feed** — read bilingual (English & Malayalam) announcements from your groups
+- **My Subscriptions** — view your family’s payment history, submit UPI/NEFT payment declarations, see active collections
 - **Push Notifications** — get reminders for upcoming events on your phone
 
 ### For Group Leaders (in addition to the above)
-- **Post Bilingual Announcements** — publish English + Malayalam messages to your group's feed (members-only or public)
+- **Post Bilingual Announcements** — publish English + Malayalam messages to your group’s feed (members-only or public)
 - **Pin Important Messages** — pin urgent or key messages to the top of the feed
 - **Manage Join Requests** — approve or decline members who request to join your group
-- **Manage Members** — view your group's member list, remove inactive members, appoint co-leaders
+- **Manage Members** — view your group’s member list, remove inactive members
 
-### For Admins (in addition to all of the above)
-- **Approve New Members** — review and approve registration requests before a member can log in
-- **Add Single Member** — manually add one member at a time to the directory
-- **Bulk Import Members** — import the existing parish roll via spreadsheet (CSV/Excel)
-- **Manage All Profiles** — edit any member's profile details; activate, disable or restore accounts
+### For Deacons (in addition to member access)
+- **Record Cash Contributions** — enter cash payments for any family; receipt number generated immediately
+- **Arrears by Bhagam** — view outstanding subscription arrears for their ward
+- **Finance Dashboard** — read-only view of collections
+
+### For Treasurers (in addition to Deacon access)
+- **Verify UPI/NEFT Submissions** — review UTR number + screenshot, approve or reject
+- **Collections Overview** — per fund, per Bhagam, per month, cash vs UPI
+- **Propose Reversals** — submit correction requests for the Vicar to approve
+
+### For Admins / Secretary (in addition to all of the above)
+- **Approve New Members** — review and approve registration requests
+- **Add / Import Members** — manual single-entry or bulk Excel/CSV import
+- **Manage All Profiles** — edit member details; activate, disable or restore accounts
 - **Create & Manage Groups** — create new parish groups, archive inactive ones
-- **Post Parish-Wide Bilingual Announcements** — send English + Malayalam messages to the entire parish or a specific group
-- **Admin Dashboard** — live overview: total members, pending approvals, active groups, upcoming events
+- **Post Parish-Wide Bilingual Announcements** — English + Malayalam messages to the entire parish
+- **Parish Registry** — manage household records (family_units), family members, and life events (baptism, confirmation, marriage, death)
+- **Propose Changes** — for registry/financial changes, submit a change request to the Vicar
+
+### For the Vicar / Super Admin (full control)
+- **Approvals Queue** — review old→new diff for every pending change request; Approve or Reject in 3 taps
+- **Grant / Revoke Roles** — assign Deacon, Treasurer, Admin, or Super Admin to any member
+- **Direct Registry Edits** — edit household and member records without a change request
+- **Create Funds & Collections** — set up contribution types, amounts, and collection windows
+- **Appoint Group Leaders** — only the Vicar can promote a member to Group Leader (enforced by database security)
+- **Admin Dashboard** — live overview: members, pending approvals, groups, events this week
 
 ---
 
@@ -66,6 +88,42 @@ The app replaces paper directories, WhatsApp broadcast chaos, and phone-call cha
 6. Once approved, the member has **full access** to the app
 
 > **Pre-registered members** (imported via bulk import by Admin) are automatically activated the first time they log in with their registered mobile number.
+
+---
+
+## Parish Registry
+
+The app maintains a full household-based parish registry:
+
+- **Households (Family Units)** — each family has a house name, address, and ward (Bhagam) assignment
+- **Family Members** — every person in the household is registered with name, relation, date of birth, and gender
+- **Life Events** — baptism, confirmation, marriage, death and other events are recorded with date, place, officiant, register number and certificate number. Events are never edited in place — corrections chain to preserve history.
+- **Ward Assignment** — assigning a family to a prayer group (Bhagam) automatically adds all linked members to that ward’s group
+
+---
+
+## Finance & Contributions
+
+- **Funds** — ledger categories (General Fund, Building Fund, etc.) created by the Vicar
+- **Collection Types** — Masavari (monthly subscription), service offertory, appeals — with fixed/suggested/open amounts and collection windows
+- **Member Submissions** — members declare UPI/NEFT payments with UTR number and screenshot; see “Submitted — awaiting verification” until verified
+- **Cash Entry** — Deacons record cash payments; receipt number assigned immediately
+- **Verification** — Treasurer checks UTR + screenshot and verifies or rejects
+- **Receipts** — sequential receipt numbers (e.g. SGM-D-00001) assigned on verification
+- **Reversals** — Treasurer/Admin proposes reversal via change request; Vicar approves; a negative linked entry is created. Originals are never deleted.
+
+---
+
+## Maker-Checker Approval Workflow
+
+All changes to the registry, financial entries, or member data by non-Vicar staff go through:
+
+1. **Staff submits a Change Request** — showing current vs proposed data
+2. **Vicar reviews** in the Approvals Queue — a plain-language old→new diff, Approve or Reject
+3. **On Approve** — the change is applied automatically and logged
+4. **On Reject** — the staff member is notified with the Vicar’s reason
+
+The Vicar’s own edits apply directly (no self-approval loop). All decisions are audit-logged.
 
 ---
 
@@ -112,11 +170,11 @@ The app adapts to the device being used:
 | **Hosting** | Vercel (free tier) |
 | **Database** | Supabase (PostgreSQL) |
 | **Authentication** | Supabase Auth — phone OTP via SMS |
-| **Storage** | Supabase Storage (avatars, cover images) |
+| **Storage** | Supabase Storage (avatars, cover images, payment proofs) |
 | **Framework** | Next.js 16 (App Router) + TypeScript |
 | **PWA** | Service Worker, Web Push Notifications |
 | **Source Code** | GitHub — Morpheus61/alleppey_marthoma |
 
 ---
 
-*Last updated: 2026-07-16*
+*Last updated: 2026-07-16 (Wave 2 complete)*

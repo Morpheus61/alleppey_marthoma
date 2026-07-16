@@ -279,68 +279,125 @@ To bring it back, tap **"Unarchive"**.
 
 ### The Vicar’s Admin Access
 
-The Vicar signs in with their mobile number (OTP) like any other member. The app recognises them as Admin because their profile has `is_admin = true` in the database.
+The Vicar signs in with their mobile number (OTP) like any other member. The app recognises them as **Super Admin** via the  table.
 
-To grant admin access: Admin Dashboard → Members → tap **“Make Admin”** next to their name.**
+To grant the Vicar access after they first register: **Admin → Roles → Select name → Vicar (Super Admin) → Grant Role**
+
+---
+
+### Granting Roles to Staff (Secretary, Treasurer, Deacon)
+
+1. Go to **Admin → Roles** (Super Admin / Vicar only)
+2. Select the staff member from the list
+3. Choose role: Deacon / Treasurer / Admin (Secretary) / Vicar (Super Admin)
+4. Tap **"Grant Role"**
+
+> All role grants are permanently audit-logged and can only be revoked.
 
 ---
 
 ### Bulk Importing Members
 
-*(For migrating your existing parish roll into the app)*
-
-1. Go to **Directory** page
-2. Tap **"Import Members"** panel
-3. Prepare a CSV/Excel file with columns: `full_name`, `phone`, `house_name`
-4. Upload the file
-5. Members are imported with **status = pending** — they will be auto-activated when they first log in with their registered phone number
-
----
-
-### Making Someone an Admin
-
-1. Admin Dashboard → Members List
-2. Find the member
-3. Tap **"Make Admin"** (or **"Revoke Admin"** to remove admin rights)
-
-> ⚠️ Only give Admin access to trusted people like the Vicar, Secretary, or Treasurer.
+1. Go to **Directory → Import Members** panel
+2. Prepare CSV/Excel: columns , , 
+3. Upload the file
+4. Members created as **pending** — auto-activated on first login
 
 ---
 
 ### Things to Remember as Admin
 
-- **Always approve new members promptly** — members in "Pending" state cannot use the app at all
-- **Keep the Groups list clean** — archive groups that are no longer active
-- **Do not disable a member's account without reason** — contact them first
-- **The directory is only visible to approved (active) members** — your data is protected
+- **Approve new members promptly** — pending members cannot use the app
+- **Keep the Groups list clean** — archive inactive groups
+- **Do not disable accounts without reason** — contact the member first
+- **The directory is only visible to active members**
+
+---
+---
+
+## SECTION 4 — For the Vicar (Super Admin)
+
+### The Approvals Queue
+
+All changes by Secretary, Treasurer, or Deacon that need Vicar approval appear here.
+
+1. Go to **Admin → Approvals**
+2. Each item shows who requested it and an **old → new diff** in plain language
+3. Tap **"✓ Approve"** to apply immediately, or type a reason and **"✗ Reject"**
+
+> The Vicar’s own direct edits apply immediately — no approval loop.
+
+---
+---
+
+## SECTION 5 — Parish Registry (Admin / Vicar)
+
+### Adding a Household
+
+**Admin → Registry → + Add Household** → fill in house name (English + Malayalam), address, Bhagam → Save.
+All family members linked to this household are automatically added to the assigned Bhagam’s prayer group.
+
+### Adding Family Members
+
+Open household card → **+ Add Member** → fill in name, relation, date of birth, gender.
+
+### Recording a Life Event (Baptism, Confirmation, Marriage, Death)
+
+Open household → find member → **Record Event** → select type → fill date, place, officiant, register/certificate numbers → Save.
+
+> Life events are never edited. Corrections are new linked entries — the chain is preserved.
+
+---
+---
+
+## SECTION 6 — Finance (Deacon, Treasurer, Admin)
+
+### Recording a Cash Payment (Deacon)
+
+**Admin → Finance → Record Cash** → search family → select collection type → enter amount → Record.
+Receipt number shown immediately. Family is notified automatically.
+
+### Verifying a UPI/NEFT Payment (Treasurer)
+
+**Admin → Finance → Verify Payments** → check UTR + screenshot against bank statement → **Verify** (receipt assigned) or **Reject** with reason.
+
+### Creating a New Collection (Vicar)
+
+**Admin → Finance → Collections → + New Collection** → fill fund, name (EN + ML), type, amount, window dates → Save.
+
+---
+---
+
+## SECTION 7 — Paying Your Masavari (Members)
+
+1. Tap **Finance** (or **My Subscriptions** from Home)
+2. See your family’s outstanding months
+3. Tap **Pay Now** for the relevant collection
+4. Church bank/UPI details are shown; complete your payment
+5. Return to the app: submit amount, date, UTR number, optional screenshot
+6. Status: **“Submitted — awaiting verification”**
+7. Treasurer verifies → you get a notification with your **receipt number**
+
+> Cash payments at the church office do not need app submission — the Deacon records them.
 
 ---
 
 ## Common Questions
 
-**Q: I filled in my profile but nothing was saved.**  
-A: Make sure you tapped “Save Details” and saw the green ✓ confirmation. If you see a red error box, take a screenshot and send it to the app admin.
+**Q: My profile data is not saving.** Make sure you see the green ✓ after tapping Save Details. Screenshot any red error and send to admin.
 
-**Q: I uploaded a photo but it still shows the old one.**  
-A: Photos upload instantly when you select them. If the old photo still shows, do a hard reload (hold Ctrl and press Reload) or clear the browser cache.
+**Q: I can’t see the Group Feed.** You need approved membership. Contact your Group Leader or Admin.
 
-**Q: I can’t see the Group Feed.**  
-A: You need to be an approved member of that group. Contact your Group Leader or the Admin to be added.
+**Q: The app shows “Registration Pending”.** Contact the church office or the Vicar for approval.
 
-**Q: The app shows “Registration Pending”.**  
-A: Your account is waiting for Admin approval. Contact the church office or the Vicar.
+**Q: I submitted a UPI payment but no update.** Treasurer will verify within 2 working days. Contact office with your UTR if overdue.
 
-**Q: Can I use the app on my computer?**  
-A: Yes. Open it in Chrome, Edge, Safari, or Firefox. On desktop you get a sidebar navigation. On a phone you get the bottom tab bar. You can also install it to the home screen on both phone and desktop — no app store needed.
+**Q: Can I edit a life event I recorded?** No — record a correction entry instead. The Vicar can approve corrections via the Approvals Queue.
 
-**Q: What does the “Draft →” button do for Malayalam?**  
-A: It converts your English text phonetically into Malayalam script (e.g. “Thomas” → “തോമസ്”). It does NOT translate meaning — you must rewrite the draft in proper Malayalam before posting.
-
-**Q: Is my personal data safe?**  
-A: Yes. The app uses Row Level Security (PostgreSQL). Your phone number and family details are only visible to approved parish members and admins. **Date of birth, email and family members are never shown in the parish directory** — they are visible only to you and to Admins. No data is shared outside the parish.
+**Q: Is my personal data safe?** Yes. Row Level Security enforces strict access. DOB, email, and family members are never shown in the directory.
 
 ---
 
-*For technical support, contact the app administrator.*  
-*For parish matters, contact the church office.*  
-*Last updated: 2026-07-16*
+*For technical support, contact the app administrator.*
+*For parish matters, contact the church office.*
+*Last updated: 2026-07-16 (Wave 2: Registry + Finance + Roles)*

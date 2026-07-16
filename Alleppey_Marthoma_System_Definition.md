@@ -1,6 +1,6 @@
 # Alleppey Marthoma — System Definition
 ### St. George Marthoma Syrian Church Community PWA
-**Last Updated:** 2026-07-16 | **Build Stage:** Stages 1–6 Feature-Complete
+**Last Updated:** 2026-07-16 | **Build Stage:** Stages 1–6 + Wave 2 Foundations Complete
 
 ---
 
@@ -26,7 +26,8 @@
 19. [Testing Infrastructure](#19-testing-infrastructure)
 20. [Build Stage Status](#20-build-stage-status)
 21. [Known Issues & Workarounds](#21-known-issues--workarounds)
-22. [Pending Actions Required](#22-pending-actions-required)
+22. [Wave 2 Schema (Migrations 011–013)](#22-wave-2-schema-migrations-011013)
+23. [Pending Actions Required](#23-pending-actions-required)
 
 ---
 
@@ -954,10 +955,11 @@ npx playwright test  # Run E2E tests
 | **2** | Auth flow (OTP, pending approval, sessions) | ✅ **Complete** | Included in Stage 1 commit |
 | **3** | Groups directory + public pages + calendar | ✅ **Complete** | Fixed Next.js 16 async params issue; groups, feed, manage pages all working |
 | **4** | Admin dashboard | ✅ **Complete** | Member approval, group CRUD, parish announcements, member management, bulk import |
-| **5** | Leader dashboard + post composer | ✅ **Complete** | BilingualPostComposer with Draft→ + review-gate; pin, visibility, manage page |
+| **5** | Leader dashboard + post composer | ✅ **Complete** | BilingualPostComposer with Draft→ + review-gate; preview-before-post; ML-only valid |
 | **6** | Directory + profile CRUD + photos | ✅ **Complete** | Full CRUD, photo upload (avatar + family), disable/reactivate, responsive layout |
+| **Wave 2** | Role system + Maker-checker + Registry + Finance | ✅ **Foundations** | Migrations 011–013, TypeScript types, server actions, route stubs; UI completion pending |
 | **7** | i18n pass + local font bundling | 🔲 **Partial** | English + Malayalam strings done; local WOFF2 font bundling pending |
-| **8** | PWA + Push notifications + cron | 🔲 **Partial** | Service Worker updated (cache-busting); VAPID keys generated; push fanout and @serwist/next pending |
+| **8** | PWA + Push notifications + cron | 🔲 **Partial** | Service Worker updated (cache-busting); VAPID keys generated; push fanout pending |
 | **9** | Polish — empty states, skeletons, a11y | 🔲 Not started | Lighthouse PWA ≥ 90, a11y audit |
 
 ---
@@ -1008,7 +1010,100 @@ npx playwright test  # Run E2E tests
 
 ---
 
-## 22. Pending Actions Required
+## 22. Wave 2 Schema (Migrations 011–013)
+
+### Migration 011: Parish Role System + Change Requests + Audit Log
+
+**parish_roles** — replaces the flat `profiles.is_admin` boolean with a multi-role system. Roles: `deacon | treasurer | admin | super_admin`. Active row = `revoked_at IS NULL`. History preserved: never delete rows — revoke + re-assign on election handover.
+
+**Helper functions (security definer):**
+- `has_role(role)` — true if caller holds the named role
+- `is_super_admin()` — true if role = super_admin
+- `is_admin_or_above()` — admin or super_admin
+- `is_finance()` — deacon, treasurer, admin, or super_admin
+- `is_admin()` — updated to union legacy `profiles.is_admin` with `parish_roles` (backwards compat)
+
+**change_requests** — maker-checker table. Non-vicar staff INSERT change_requests; super_admin reviews via `apply_change_request(id)` stored procedure (security definer, one transaction: applies change + marks approved + writes audit).
+
+**audit_log** — append-only. No UPDATE/DELETE policies. Trigger-populated on role changes, change request decisions, financial writes, member enable/disable.
+
+Data migration: existing `is_admin=true` profiles → `super_admin` rows on first run.
+
+---
+
+### Migration 012: Parish Registry
+
+**family_units** — household record: house_name (EN + ML), address, `prayer_group_id` (= Bhagam/ward assignment). Ward change → change request → Vicar.
+
+**family_members** — per-person rows within a family: name (EN + ML), relation_to_head, date_of_birth, gender, is_deceased. `profile_id` nullable — links to auth account when the person registers. **Trigger** `trg_sync_ward_membership`: when a family's `prayer_group_id` changes, auto-updates `group_memberships` for all linked profiles. Derived membership — no join-request flow for prayer groups.
+
+**life_events** — baptism, confirmation, marriage, death, other. `superseded_by` chain for corrections — never edit in place. Schema ready for certificate PDF generation (out of scope for now).
+
+**directory_entries VIEW** — privacy projection exposing only: name, house_name, prayer group, avatar, whatsapp link. DOB, email, address, life events never appear in directory.
+
+**app_settings** — key-value runtime config: `receipt_prefix`, `receipt_start_number`, `show_arrears_to_family`, bank details, UPI ID. Four values awaiting Vicar input (⛪CONFIG 1–4).
+
+Data migration: existing `profiles.family_members` JSONB → `family_units` + `family_members` rows on first run.
+
+---
+
+### Migration 013: Finance Module
+
+**funds** — ledger categories (not separate bank accounts). `is_active`, created by super_admin.
+
+**contribution_types** — collections within a fund: Masavari (subscription), service_offertory, appeal. `amount_mode`: fixed / suggested / open. Window: `period_start` / `period_end`. Progress bar shown to members when `target_visibility = 'parish'`.
+
+**contribution_entries** — payment records. `channel`: upi_declared / cash / neft_declared. UTR unique partial index prevents double-payment. `status`: submitted → verified → receipt number assigned. Cash entries: status='verified' immediately. Reversal chain via `reversal_of` FK — originals immutable.
+
+**receipt_counters** + `next_receipt_number()` — advisory-locked sequential receipt numbers. Format: `{receipt_prefix}{padded_number}` (default `SGM-D-00001`).
+
+**payment-proofs** storage bucket — private. Finance roles + submitting family can read. Signed URLs required.
+
+**Triggers:** `trg_assign_receipt` assigns receipt number on status → verified; `trg_audit_contribution_insert` writes audit on new submission.
+
+---
+
+### Permission Matrix (enforced in RLS)
+
+| Capability | deacon | treasurer | admin | super_admin |
+|---|---|---|---|---|
+| Record cash | ✅ | ✅ | ✅ | ✅ |
+| View finance dashboard | ✅ | ✅ | ✅ | ✅ |
+| Verify UPI submissions | — | ✅ | ✅ | ✅ |
+| Announcements / events / member approvals | — | — | ✅ | ✅ |
+| Edit member / registry data | — | — | change request | ✅ direct |
+| Reverse financial entry | — | change request | change request | ✅ |
+| Create funds / collection types | — | change request | change request | ✅ |
+| Grant roles / appoint leaders / decide requests | — | — | — | ✅ |
+
+---
+
+### New Application Routes (Wave 2)
+
+| Route | Auth Required | Description |
+|---|---|---|
+| `/admin/roles` | super_admin | Grant / revoke parish roles |
+| `/admin/approvals` | super_admin | Change request queue with old→new diff |
+| `/admin/registry` | admin+ | Household card list; life-event recording |
+| `/admin/finance` | deacon+ | Finance dashboard + verification queue |
+| `/finance` | active member | My subscriptions, payment history, submit UPI |
+
+---
+
+### Config Placeholder Files
+
+| File | Purpose | Status |
+|---|---|---|
+| `config/bhagams.example.json` | ⛪CONFIG-1: Bhagam/ward names in correct Malayalam | Awaiting Vicar |
+| `config/funds.example.json` | ⛪CONFIG-2: Fund names + collection types + Masavari amount | Awaiting Vicar |
+
+Settings in `app_settings` table awaiting Vicar decision:
+- `receipt_prefix` / `receipt_start_number` — ⛪CONFIG-3
+- `show_arrears_to_family` — ⛪CONFIG-4 (default: `false`)
+
+---
+
+## 23. Pending Actions Required
 
 ### Confirm Done-For-Real
 | Item | Status |
