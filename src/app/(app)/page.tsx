@@ -102,8 +102,8 @@ export default async function HomePage() {
             {events.map(e => (
               <div key={e.id} className="flex gap-3 bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm">
                 <div className="shrink-0 bg-brand-900 text-white rounded-lg w-11 h-11 flex flex-col items-center justify-center text-center">
-                  <p className="text-[10px] font-bold uppercase leading-none">{format(new Date(e.starts_at), 'MMM')}</p>
-                  <p className="text-lg font-bold leading-none">{format(new Date(e.starts_at), 'd')}</p>
+                  <p className="text-[10px] font-bold uppercase leading-none">{e.starts_at ? format(new Date(e.starts_at), 'MMM') : ''}</p>
+                  <p className="text-lg font-bold leading-none">{e.starts_at ? format(new Date(e.starts_at), 'd') : ''}</p>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">{e.title}</p>
