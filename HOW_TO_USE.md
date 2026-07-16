@@ -1,13 +1,15 @@
 # How to Use — St. George Marthoma Church App
 ### Simple Guide for Members, Group Leaders & Admins
 
+*Last updated: 2026-07-16*
+
 ---
 
 ## SECTION 1 — For Every Parish Member
 
 ### Getting Started: How to Sign In
 
-1. Open the app on your phone browser (or from your home screen if installed)
+1. Open the app on your phone or computer browser (or from your home screen if installed as a PWA)
 2. Enter your **10-digit Indian mobile number** (e.g. 9876543210)
 3. Tap **"Send OTP"**
 4. You will receive a **6-digit code** on your phone via SMS
@@ -21,19 +23,27 @@
 
 After your first login, your account is **Pending Approval**. You will see a message saying the church office needs to approve you.
 
-**While waiting for approval:**
-- Go to **My Profile** (bottom navigation — person icon)
-- Fill in all your details:
-  - Full Name (English)
-  - Full Name in Malayalam *(tap the "Type → മലയാളം" button to auto-convert)*
-  - House Name / Family Name
-  - Date of Birth
-  - Address
-  - Phone (landline if any)
-  - WhatsApp number (or tick "My mobile is my WhatsApp number")
-  - Email address
-- Add **Family Members** — tap "Add Family Member" and enter each person's name, relation (Spouse / Son / Daughter, etc.), and date of birth
-- Tap **"Save Changes"**
+**While waiting for approval, fill in your details:**
+
+1. Tap **Profile** (bottom bar on phone, or left sidebar on desktop)
+2. At the top of the form you will see two photo upload buttons:
+   - **Profile Picture** (round circle) — tap to upload your personal headshot
+   - **Family Photo** (wide rectangle) — tap to upload a household group photo
+   - *(Photos save instantly — no need to press Save)*
+3. Fill in all your details:
+   - Full Name (English)
+   - Full Name in Malayalam *(tap the “Type → മലയാളം” button to auto-convert phonetically)*
+   - Date of Birth
+   - House Name / Family Name
+   - Address
+   - Phone (landline if any)
+   - WhatsApp number (or tick “My mobile is my WhatsApp number”)
+   - Email address
+4. Add **Family Members** — tap “Add Family Member” for each person in your household:
+   - Name (English + Malayalam)
+   - Relation (Spouse, Son, Daughter, etc.)
+   - Date of Birth
+5. Tap **“Save Details”** — a green tick ✓ confirms it saved
 
 Once the Admin approves you, you will have full access.
 
@@ -41,14 +51,17 @@ Once the Admin approves you, you will have full access.
 
 ### Navigating the App
 
-The app has a **bottom navigation bar** with 4 icons:
+**On a phone:** A **bottom tab bar** appears at the bottom of the screen.  
+**On a desktop or tablet:** A **sidebar** on the left side shows all navigation labels.
 
-| Icon | What It Opens |
+| Icon / Label | What It Opens |
 |---|---|
-| 🏠 Home | Welcome screen with quick links |
-| 👥 Groups | List of all parish groups |
-| 📅 Calendar | Upcoming church events and services |
-| 👤 Profile | Your personal profile and settings |
+| 🏠 **Home** | Welcome screen with announcements and upcoming events |
+| 👥 **Groups** | List of all parish groups |
+| 📖 **Directory** | Full parish member directory with photos |
+| 📅 **Calendar** | Upcoming church events and services |
+| 👤 **Profile** | Your personal profile, photos and family details |
+| 🛡 **Admin** | Admin Dashboard *(visible to admins only)* |
 
 ---
 
@@ -64,17 +77,19 @@ The app has a **bottom navigation bar** with 4 icons:
 ### Seeing a Group's Announcements (Feed)
 
 - You can only read a group's feed if you are **an approved member** of that group
-- Posts appear newest first; **pinned messages** always appear at the top
-- If a group shows "Join this group to see its feed", contact your group leader or Admin to be added
+- Posts show **Malayalam text first** (if the leader added it), English below
+- 📌 Pinned messages always appear at the top
+- If a group shows “Join this group to see its feed”, contact your Group Leader or Admin to be added
 
 ---
 
 ### The Parish Directory
 
-- Found in the **Home** screen (admin-configured)
-- Shows all active parish members with their contact details
-- You can search by name or house name
-- Only active, approved members can see this
+- Tap **Directory** in the navigation
+- Shows all active parish members, grouped alphabetically
+- Each member card shows their **family photo** (wide banner) and **profile picture** (small circle)
+- Tap the green WhatsApp icon to open a chat directly
+- Search by name, house name, or address using the search box
 
 ---
 
@@ -88,8 +103,8 @@ The app has a **bottom navigation bar** with 4 icons:
 
 ### Signing Out
 
-- Go to **My Profile**
-- Scroll to the bottom and tap **"Sign Out"**
+- **On phone:** Tap **Profile** → tap the sign-out button (→|) in the top-right of the header
+- **On desktop:** The sign-out button is always visible in the top-right corner of the header**
 
 ---
 
@@ -110,16 +125,23 @@ The app has a **bottom navigation bar** with 4 icons:
 
 ---
 
-### Posting a Message to Your Group
+### Posting a Bilingual Message to Your Group
 
-1. Open your group's **Manage Page**
-2. You will see a **"Post Message"** box at the top
-3. Type a **Title** (optional) and your **Message** (required)
-4. Choose visibility:
+1. Open your Group Management page
+2. You will see the **“Post Message”** composer with two columns — English (left) and Malayalam (right)
+3. Write your **English message** in the left column (required)
+4. For the **Malayalam column**:
+   - Type Malayalam directly, OR
+   - Click **“Draft →”** to auto-convert your English text phonetically into Malayalam script
+   - ⚠️ The draft converts letters, NOT meaning — **rewrite it in proper Malayalam**
+5. Choose visibility:
    - **Members only** — only group members can see this
    - **Public** — anyone in the parish can see this
-5. Tick **"📌 Pin this post"** if it's important and should stay at the top
-6. Tap **"Post to [Group Name]"**
+6. Tick **“📌 Pin this post”** if it should stay at the top
+7. If you wrote Malayalam, **tick the review box**: “I have read the Malayalam text and it is correct”
+8. Tap **“Post to [Group Name]”**
+
+> The Post button stays greyed out until you tick the review box (if Malayalam is present). This prevents unreviewed auto-converted text from being published.**
 
 ---
 
@@ -171,26 +193,46 @@ On the Manage Page, scroll down to see **"Active Members"**:
 
 ### Approving a New Member
 
-When someone registers, they appear in **"Pending Approvals"** on the Admin Dashboard:
+When someone registers, they appear in **“Pending Approvals”** on the Admin Dashboard:
 
 1. Review their name and phone number
-2. Tap **"Approve"** — they immediately get full access
-3. Tap **"Decline"** — their account is removed (they can register again)
+2. Tap **“Approve”** — they immediately get full access
+3. Tap **“Decline”** — their account is disabled
 
-> New members **cannot use the app** until you approve them. This protects the parish data.
+> New members **cannot use the app** until you approve them.
 
 ---
 
-### Editing Any Member's Profile
+### Adding a Single Member (Manual Entry)
 
-1. Go to **Admin Dashboard** → scroll to the **Members List**
-2. Tap the **"Edit"** button next to any member
-3. You can update all their profile fields
-4. You can also change their **Status**:
+1. Go to **Directory** page → **“Add Single Member”** panel
+2. Fill in: Full Name, Mobile Number (10-digit, required), House Name, and Status
+3. Tap **“Add Member”**
+
+The member will be auto-activated the first time they sign in with that mobile number.
+
+---
+
+### Disabling a Member
+
+From the **Directory**:
+1. Find the member in the active list
+2. Tap the **🚧 (red UserX)** icon next to their name
+3. Confirm the dialog
+
+To **re-activate**: scroll to the bottom of the Directory → tap **“✓ (green UserCheck)”** next to their name.
+
+---
+
+### Editing Any Member’s Profile
+
+1. **Directory** → find the member → tap the **✏️ (pencil)** icon
+2. Edit any field: name, address, family members, status
+3. Status options:
    - **Active** — normal access
-   - **Pending** — put them back to waiting state
-   - **Disabled** — block their access (they see a "disabled" message when trying to sign in)
-5. Tap **"Save Changes"**
+   - **Pending** — back to waiting state
+   - **Disabled** — blocks their access
+4. Tap **“Save Details”****
 
 ---
 
@@ -218,13 +260,23 @@ To bring it back, tap **"Unarchive"**.
 
 ---
 
-### Posting a Parish-Wide Announcement
+### Posting a Parish-Wide Bilingual Announcement
 
-1. Admin Dashboard → scroll to **"Parish Announcement"**
-2. Write your message (Title + Body)
-3. Choose visibility: Members only or Public
-4. Optionally pin it
-5. Tap **"Post to Parish"**
+1. Admin Dashboard → **“Post Announcement”**
+2. Write the **English message** in the left column
+3. Optionally add **Malayalam** in the right column (or use **“Draft →”** as a phonetic starting point)
+4. Choose the target: *All Members (Parish-wide)* or a specific group
+5. Choose visibility: Members only or Public
+6. If Malayalam is added, **tick the review box**
+7. Tap **“Post Announcement”**
+
+---
+
+### The Vicar’s Admin Access
+
+The Vicar signs in with their mobile number (OTP) like any other member. The app recognises them as Admin because their profile has `is_admin = true` in the database.
+
+To grant admin access: Admin Dashboard → Members → tap **“Make Admin”** next to their name.**
 
 ---
 
@@ -261,22 +313,32 @@ To bring it back, tap **"Unarchive"**.
 
 ## Common Questions
 
-**Q: I entered my data but after refreshing, it's gone.**  
-A: This was a known issue that has been fixed. Make sure you tap "Save Changes" and wait for the green "Saved!" message before closing the page. If you are still experiencing this, sign out and sign back in, then try again.
+**Q: I filled in my profile but nothing was saved.**  
+A: Make sure you tapped “Save Details” and saw the green ✓ confirmation. If you see a red error box, take a screenshot and send it to the app admin.
 
-**Q: I can't see the Group Feed.**  
+**Q: I uploaded a photo but it still shows the old one.**  
+A: Photos upload instantly when you select them. If the old photo still shows, do a hard reload (hold Ctrl and press Reload) or clear the browser cache.
+
+**Q: I can’t see the Group Feed.**  
 A: You need to be an approved member of that group. Contact your Group Leader or the Admin to be added.
 
-**Q: The app shows "Registration Pending".**  
-A: Your account is waiting for Admin approval. Please contact the church office or the Vicar.
+**Q: The app shows “Registration Pending”.**  
+A: Your account is waiting for Admin approval. Contact the church office or the Vicar.
 
 **Q: Can I use the app on my computer?**  
-A: Yes! Open it in any modern browser (Chrome, Safari, Edge, Firefox). On a phone you can also "Add to Home Screen" to install it like a normal app — no app store needed.
+A: Yes. Open it in Chrome, Edge, Safari, or Firefox. On desktop you get a sidebar navigation. On a phone you get the bottom tab bar. You can also install it to the home screen on both phone and desktop — no app store needed.
+
+**Q: What does the “Draft →” button do for Malayalam?**  
+A: It converts your English text phonetically into Malayalam script (e.g. “Thomas” → “തോമസ്”). It does NOT translate meaning — you must rewrite the draft in proper Malayalam before posting.
 
 **Q: Is my personal data safe?**  
-A: Yes. The app uses industry-standard security. Your phone number and family details are only visible to approved parish members and admins. No data is shared outside the parish.
+A: Yes. The app uses Row Level Security (PostgreSQL). Your phone number and family details are only visible to approved parish members and admins. No data is shared outside the parish.
+
+**Q: The page shows an error when I open the app.**  
+A: Try: (1) Hard reload with Ctrl+Shift+R. (2) DevTools → Application → Service Workers → Unregister → then reload. This clears any stale cached version of the app.
 
 ---
 
-*For technical support, contact the church office or the app administrator.*  
+*For technical support, contact the app administrator.*  
+*For parish matters, contact the church office.*  
 *Last updated: 2026-07-16*
