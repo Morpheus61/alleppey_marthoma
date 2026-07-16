@@ -30,6 +30,8 @@ export async function postToGroup(groupId: string, formData: FormData) {
   const body_ml    = (formData.get('body_ml')  as string | null)?.trim() || null
   // At least one language required; fall back to ML text if no English body
   const body       = bodyEn || body_ml || ''
+  const visibility = (formData.get('visibility') as 'members' | 'public') || 'members'
+  const pin        = formData.get('is_pinned') === 'on'
   if (!body) return
 
   await supabase.from('posts').insert({

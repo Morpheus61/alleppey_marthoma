@@ -82,7 +82,7 @@ export default async function RolesPage() {
       {/* Grant role form */}
       <section>
         <h2 className="text-base font-bold text-brand-900 mb-3">Grant a Role</h2>
-        <form action={async (fd: FormData) => { 'use server'; await assignRole(fd.get('profile_id') as string, fd.get('role') as 'deacon' | 'treasurer' | 'admin' | 'super_admin') }}
+        <form action={async (fd: FormData) => { await assignRole(fd.get('profile_id') as string, fd.get('role') as 'deacon' | 'treasurer' | 'admin' | 'super_admin') }}
           className="bg-white rounded-xl border shadow-sm p-4 space-y-3">
           <div className="grid sm:grid-cols-2 gap-3">
             <div>

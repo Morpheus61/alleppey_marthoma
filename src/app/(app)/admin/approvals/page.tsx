@@ -85,12 +85,12 @@ export default async function ApprovalsPage() {
           </div>
 
           <div className="flex gap-2">
-            <form action={approveChangeRequest.bind(null, req.id)} className="flex-1">
+            <form action={async () => { await approveChangeRequest(req.id) }} className="flex-1">
               <button className={`w-full ${btn} bg-green-600 text-white hover:bg-green-700`}>
                 ✓ Approve
               </button>
             </form>
-            <form action={async (fd: FormData) => { 'use server'; await rejectChangeRequest(req.id, fd.get('remarks') as string) }}
+            <form action={async (fd: FormData) => { await rejectChangeRequest(req.id, fd.get('remarks') as string) }}
               className="flex-1 space-y-1">
               <input name="remarks" placeholder="Reason for rejection…"
                 className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-900" />
