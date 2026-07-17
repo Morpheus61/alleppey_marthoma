@@ -1,6 +1,13 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { addFamilyMember, linkProfileToMember, addMembersToGroup, updateHouseholdPrayerGroup, setMemberGroupMemberships, unlinkProfileFromMember, addLifeEvent } from '../actions'
+
+async function transliterate(text: string): Promise<string> {
+  if (!text.trim()) return ''
+  const res = await fetch(`/api/transliterate?text=${encodeURIComponent(text)}`)
+  const json = await res.json()
+  return json.result ?? ''
+}
 
 const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white placeholder:text-gray-400'
 
@@ -14,16 +21,30 @@ export function AddMemberForm({ familyId, profiles }: { familyId: string; profil
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const nameEnRef = useRef<HTMLInputElement>(null)
+  const [fullNameMl, setFullNameMl] = useState('')
+  const [mlLoading, setMlLoading] = useState(false)
+
+  async function handleTransliterate() {
+    const text = nameEnRef.current?.value ?? ''
+    if (!text) return
+    setMlLoading(true)
+    const result = await transliterate(text)
+    if (result) setFullNameMl(result)
+    setMlLoading(false)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaving(true); setError(null)
     const fd = new FormData(e.currentTarget)
     fd.set('family_id', familyId)
+    fd.set('full_name_ml', fullNameMl)
     const r = await addFamilyMember(fd)
     setSaving(false)
     if ('error' in r) { setError(r.error); return }
     setSaved(true)
+    setFullNameMl('')
     e.currentTarget.reset()
     setTimeout(() => setSaved(false), 2000)
   }
@@ -34,11 +55,18 @@ export function AddMemberForm({ familyId, profiles }: { familyId: string; profil
       <div className="grid grid-cols-2 gap-2">
         <div className="col-span-2 sm:col-span-1">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Full Name *</label>
-          <input name="full_name" required placeholder="English" className={inp} />
+          <input ref={nameEnRef} name="full_name" required placeholder="English" className={inp} />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-[10px] font-semibold text-amber-600 uppercase mb-0.5">Malayalam Name</label>
-          <input name="full_name_ml" placeholder="മലയാളം" className={`${inp} font-malayalam`} lang="ml" />
+          <div className="flex items-center justify-between mb-0.5">
+            <label className="block text-[10px] font-semibold text-amber-600 uppercase">Malayalam Name</label>
+            <button type="button" onClick={handleTransliterate} disabled={mlLoading}
+              className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 hover:bg-amber-100 disabled:opacity-50">
+              {mlLoading ? 'Transliterating…' : 'Type → മലയാളം'}
+            </button>
+          </div>
+          <input name="full_name_ml" value={fullNameMl} onChange={e => setFullNameMl(e.target.value)}
+            placeholder="മലയാളം" className={`${inp} font-malayalam`} lang="ml" />
         </div>
         <div>
           <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Relation</label>

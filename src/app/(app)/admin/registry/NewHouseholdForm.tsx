@@ -1,20 +1,40 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createHousehold } from './actions'
 
 const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 placeholder:text-gray-400 bg-white'
 
+async function transliterate(text: string): Promise<string> {
+  if (!text.trim()) return ''
+  const res = await fetch(`/api/transliterate?text=${encodeURIComponent(text)}`)
+  const json = await res.json()
+  return json.result ?? ''
+}
+
 export default function NewHouseholdForm({ prayerGroups }: { prayerGroups: { id: string; name: string; name_ml: string | null }[] }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const nameEnRef = useRef<HTMLInputElement>(null)
+  const [houseNameMl, setHouseNameMl] = useState('')
+  const [mlLoading, setMlLoading] = useState(false)
+
+  async function handleTransliterate() {
+    const text = nameEnRef.current?.value ?? ''
+    if (!text) return
+    setMlLoading(true)
+    const result = await transliterate(text)
+    if (result) setHouseNameMl(result)
+    setMlLoading(false)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaving(true)
     setError(null)
     const fd = new FormData(e.currentTarget)
+    fd.set('house_name_ml', houseNameMl)
     const result = await createHousehold(fd)
     setSaving(false)
     if ('error' in result) { setError(result.error); return }
@@ -26,11 +46,18 @@ export default function NewHouseholdForm({ prayerGroups }: { prayerGroups: { id:
       <div className="grid sm:grid-cols-2 gap-3">
         <div className="col-span-2 sm:col-span-1">
           <label className="block text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1">House / Family Name *</label>
-          <input name="house_name" required placeholder="e.g. Pandampurath" className={inp} />
+          <input ref={nameEnRef} name="house_name" required placeholder="e.g. Pandampurath" className={inp} />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1">Name in Malayalam</label>
-          <input name="house_name_ml" placeholder="പൻഡാമ്പ്യൂറത്ത്" className={`${inp} font-malayalam`} lang="ml" />
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-[11px] font-semibold text-amber-700 uppercase tracking-wide">Name in Malayalam</label>
+            <button type="button" onClick={handleTransliterate} disabled={mlLoading}
+              className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 hover:bg-amber-100 disabled:opacity-50">
+              {mlLoading ? 'Transliterating…' : 'Type → മലയാളം'}
+            </button>
+          </div>
+          <input name="house_name_ml" value={houseNameMl} onChange={e => setHouseNameMl(e.target.value)}
+            placeholder="പൻഡാമ്പ്യൂറത്ത്" className={`${inp} font-malayalam`} lang="ml" />
         </div>
         <div className="col-span-2">
           <label className="block text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1">Address</label>

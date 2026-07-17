@@ -1,6 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+
+async function transliterate(text: string): Promise<string> {
+  if (!text.trim()) return ''
+  const res = await fetch(`/api/transliterate?text=${encodeURIComponent(text)}`)
+  const json = await res.json()
+  return json.result ?? ''
+}
 import Link from 'next/link'
 import { Search, Plus, UserPlus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { createHousehold, createHouseholdWithProfile, deleteHousehold } from './actions'
@@ -27,6 +34,18 @@ export default function RegistrySearch({
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState<string | null>(null)
   const [deletingId, setDeletingId]     = useState<string | null>(null)
+  const createNameRef = useRef<HTMLInputElement>(null)
+  const [createMl, setCreateMl]         = useState('')
+  const [mlLoading, setMlLoading]       = useState(false)
+
+  async function handleCreateMlTransliterate() {
+    const text = createNameRef.current?.value ?? ''
+    if (!text) return
+    setMlLoading(true)
+    const result = await transliterate(text)
+    if (result) setCreateMl(result)
+    setMlLoading(false)
+  }
 
   const filtered = query.trim().length < 1
     ? households
@@ -217,11 +236,18 @@ export default function RegistrySearch({
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] font-semibold text-amber-700 uppercase mb-1">House / Family Name *</label>
-                <input name="house_name" required defaultValue={query} className={inp} placeholder="e.g. Pandampurath" />
+                <input ref={createNameRef} name="house_name" required defaultValue={query} className={inp} placeholder="e.g. Pandampurath" />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold text-amber-700 uppercase mb-1">Name in Malayalam</label>
-                <input name="house_name_ml" className={`${inp} font-malayalam`} lang="ml" />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] font-semibold text-amber-700 uppercase">Name in Malayalam</label>
+                  <button type="button" onClick={handleCreateMlTransliterate} disabled={mlLoading}
+                    className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 hover:bg-amber-100 disabled:opacity-50">
+                    {mlLoading ? 'Transliterating…' : 'Type → മലയാളം'}
+                  </button>
+                </div>
+                <input name="house_name_ml" value={createMl} onChange={e => setCreateMl(e.target.value)}
+                  className={`${inp} font-malayalam`} lang="ml" placeholder="" />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Address</label>

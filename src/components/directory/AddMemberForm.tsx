@@ -7,15 +7,35 @@ import { addMember } from '@/app/(app)/directory/actions'
 const inp =
   'w-full rounded-xl border border-amber-100 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 placeholder:text-gray-400 shadow-sm'
 
+async function transliterate(text: string): Promise<string> {
+  if (!text.trim()) return ''
+  const res = await fetch(`/api/transliterate?text=${encodeURIComponent(text)}`)
+  const json = await res.json()
+  return json.result ?? ''
+}
+
 export default function AddMemberForm() {
   const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
+  const nameEnRef = useRef<HTMLInputElement>(null)
+  const [fullNameMl, setFullNameMl] = useState('')
+  const [mlLoading, setMlLoading] = useState(false)
+
+  async function handleTransliterate() {
+    const text = nameEnRef.current?.value ?? ''
+    if (!text) return
+    setMlLoading(true)
+    const result = await transliterate(text)
+    if (result) setFullNameMl(result)
+    setMlLoading(false)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setStatus('saving')
     const fd = new FormData(e.currentTarget)
+    fd.set('full_name_ml', fullNameMl)
     const result = await addMember(fd)
     if (result && 'error' in result) {
       setStatus('error')
@@ -23,6 +43,7 @@ export default function AddMemberForm() {
     } else {
       setStatus('success')
       setMessage('Member added successfully.')
+      setFullNameMl('')
       formRef.current?.reset()
       setTimeout(() => setStatus('idle'), 4000)
     }
@@ -45,6 +66,7 @@ export default function AddMemberForm() {
               Full Name *
             </label>
             <input
+              ref={nameEnRef}
               name="full_name"
               required
               placeholder="e.g. Thomas Varughese"
@@ -53,11 +75,19 @@ export default function AddMemberForm() {
           </div>
 
           <div className="col-span-2">
-            <label className="block text-[11px] font-semibold text-amber-700 uppercase tracking-wide mb-1">
-              Name in Malayalam
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-[11px] font-semibold text-amber-700 uppercase tracking-wide">
+                Name in Malayalam
+              </label>
+              <button type="button" onClick={handleTransliterate} disabled={mlLoading}
+                className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 hover:bg-amber-100 disabled:opacity-50">
+                {mlLoading ? 'Transliterating…' : 'Type → മലയാളം'}
+              </button>
+            </div>
             <input
               name="full_name_ml"
+              value={fullNameMl}
+              onChange={e => setFullNameMl(e.target.value)}
               placeholder="തോമസ് വർഗ്ഗീസ്"
               className={`${inp} font-malayalam`}
               lang="ml"

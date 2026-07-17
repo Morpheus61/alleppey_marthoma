@@ -4,12 +4,13 @@ import Link from 'next/link'
 import type { Profile, Group } from '@/types/database'
 import {
   approveProfile, declineProfile, toggleAdmin,
-  createGroup, archiveGroup, unarchiveGroup,
+  archiveGroup, unarchiveGroup,
   postAnnouncement,
 } from './actions'
 import { approveClaim, denyClaim } from '@/app/auth/claim/actions'
 import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
 import type { GroupOption } from '@/components/posts/BilingualPostComposer'
+import CreateGroupForm from './CreateGroupForm'
 
 export const metadata = { title: 'Admin Dashboard' }
 
@@ -174,22 +175,7 @@ export default async function AdminPage() {
         <h2 className="text-lg font-bold text-brand-900 mb-3">Groups</h2>
 
         {/* Create group form */}
-        <form action={createGroup} className="bg-white rounded-xl border shadow-sm p-4 space-y-3 mb-4">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Create New Group</p>
-          <div className="grid grid-cols-2 gap-3">
-            <input name="name"    required placeholder="Group name (English)" className="col-span-2 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900" />
-            <input name="name_ml" placeholder="പേര് (Malayalam)" className="col-span-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-malayalam focus:outline-none focus:ring-2 focus:ring-brand-900" />
-            <textarea name="description" rows={2} placeholder="Description (optional)" className="col-span-2 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 resize-none" />
-            <select name="group_type" className="col-span-2 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900">
-              <option value="functional">Functional (choir, committee…)</option>
-              <option value="prayer">Prayer Group</option>
-              <option value="youth">Youth</option>
-            </select>
-          </div>
-          <button type="submit" className={`w-full ${btn} bg-brand-900 text-white hover:bg-brand-800`}>
-            + Create Group
-          </button>
-        </form>
+        <CreateGroupForm />
 
         {/* Active groups */}
         <div className="space-y-2">
