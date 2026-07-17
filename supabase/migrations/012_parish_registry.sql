@@ -197,11 +197,17 @@ create policy "family_units: super_admin all"
   using  (public.is_super_admin())
   with check (public.is_super_admin());
 
--- Admin+: read all
+-- Admin+: read all (using parish_roles new system OR legacy profiles.is_admin)
 create policy "family_units: admin read"
   on public.family_units for select
   to authenticated
-  using (public.is_admin_or_above());
+  using (
+    public.is_admin_or_above()
+    or exists (
+      select 1 from public.profiles
+      where id = auth.uid() and is_admin = true and status = 'active'
+    )
+  );
 
 -- Member: read their own family
 create policy "family_units: member read own"
@@ -229,7 +235,13 @@ create policy "family_members: super_admin all"
 create policy "family_members: admin read"
   on public.family_members for select
   to authenticated
-  using (public.is_admin_or_above());
+  using (
+    public.is_admin_or_above()
+    or exists (
+      select 1 from public.profiles
+      where id = auth.uid() and is_admin = true and status = 'active'
+    )
+  );
 
 create policy "family_members: member read own family"
   on public.family_members for select
