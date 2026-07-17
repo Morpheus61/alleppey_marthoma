@@ -39,6 +39,10 @@ export interface Database {
           is_mobile_whatsapp: boolean
           email: string | null
           family_members: FamilyMember[]
+          // Wave 2: registry attachment
+          family_member_id: string | null
+          display_name: string | null
+          claim_status: 'unclaimed' | 'pending_claim' | 'approved'
         }
         Insert: {
           id: string
@@ -59,6 +63,9 @@ export interface Database {
           email?: string | null
           family_members?: FamilyMember[]
           family_photo_url?: string | null
+          family_member_id?: string | null
+          display_name?: string | null
+          claim_status?: 'unclaimed' | 'pending_claim' | 'approved'
         }
         Update: {
           id?: string
@@ -68,6 +75,9 @@ export interface Database {
           house_name?: string | null
           avatar_url?: string | null
           family_photo_url?: string | null
+          family_member_id?: string | null
+          display_name?: string | null
+          claim_status?: 'unclaimed' | 'pending_claim' | 'approved'
           ui_language?: 'en' | 'ml'
           is_admin?: boolean
           status?: 'pending' | 'active' | 'disabled'

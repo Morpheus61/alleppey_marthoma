@@ -42,21 +42,6 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-      new.id,
-      coalesce(
-        new.raw_user_meta_data->>'full_name',
-        new.raw_user_meta_data->>'name',
-        'New Member'
-      ),
-      v_phone,
-      'pending'
-    )
-    on conflict (id) do nothing;
-  end if;
-
-  return new;
-end;
-$$;
 
 -- Drop and recreate to handle re-runs cleanly
 drop trigger if exists on_auth_user_created on auth.users;

@@ -41,13 +41,13 @@ export default async function AdminPage() {
       .select('id, phone, display_name, family_member_id, family_members!family_member_id(full_name, full_name_ml, relation_to_head, family_units(house_name, groups!prayer_group_id(name, name_ml)))')
       .eq('claim_status', 'pending_claim')
       .order('created_at'),
-    supabase.from('profiles').select('id,display_name,full_name,full_name_ml,phone,house_name,is_admin,status').in('status', ['active','disabled']).order('display_name,full_name'),
+    supabase.from('profiles').select('id,display_name,full_name,phone,house_name,is_admin,status').in('status', ['active','disabled']).order('display_name,full_name'),
     supabase.from('groups').select('id,name,name_ml,slug,group_type,is_archived').order('name'),
   ])
 
   const pending      = (pendingRaw  as Profile[] | null) ?? []
   const claims       = (claimsRaw   as unknown[]) ?? []
-  const members      = (membersRaw  as Pick<Profile,'id'|'display_name'|'full_name'|'full_name_ml'|'phone'|'house_name'|'is_admin'|'status'>[] | null) ?? []
+  const members  = (membersRaw  as Pick<Profile,'id'|'display_name'|'full_name'|'phone'|'house_name'|'is_admin'|'status'>[] | null) ?? []
   const groups       = (groupsRaw   as Pick<Group,'id'|'name'|'name_ml'|'slug'|'group_type'|'is_archived'>[] | null) ?? []
   const activeGroups   = groups.filter(g => !g.is_archived)
   const archivedGroups = groups.filter(g => g.is_archived)

@@ -20,13 +20,14 @@ where  display_name is null
   and  full_name    is not null;
 
 -- A3. Relocate phone_landline → family_units
---     Uses the first linked family member's family to find the unit.
+--     (cross-table via implicit join in FROM clause)
 update public.family_units fu
 set    phone_landline = p.phone_landline
-from   public.profiles p
-join   public.family_members fm
-       on fm.profile_id = p.id and fm.family_id = fu.id
-where  p.phone_landline is not null
+from   public.profiles p,
+       public.family_members fm
+where  fm.profile_id = p.id
+  and  fm.family_id  = fu.id
+  and  p.phone_landline is not null
   and  fu.phone_landline is null;
 
 -- A4. Relocate email → family_members
@@ -39,9 +40,10 @@ where  p.id = fm.profile_id
 -- A5. Move family_photo_url → family_units
 update public.family_units fu
 set    family_photo_url = p.family_photo_url
-from   public.family_members fm
-join   public.profiles p on p.id = fm.profile_id
-where  fm.family_id = fu.id
+from   public.family_members fm,
+       public.profiles p
+where  fm.family_id   = fu.id
+  and  p.id           = fm.profile_id
   and  p.family_photo_url is not null
   and  fu.family_photo_url is null;
 
