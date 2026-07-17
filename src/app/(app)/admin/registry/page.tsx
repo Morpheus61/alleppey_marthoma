@@ -7,10 +7,12 @@ export const metadata = { title: 'Parish Registry' }
 export default async function RegistryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
 
   const { data: profileData } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   const { data: roleRow } = await supabase.from('parish_roles')
     .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
+  if (!profileData?.is_admin && !roleRow) redirect('/admin')
 
   const { data: families } = await supabase
     .from('family_units')
