@@ -1,67 +1,47 @@
 import { createClient } from '@/lib/supabase/server'
-import { getTranslations } from 'next-intl/server'
+import { redirect } from 'next/navigation'
+import CalendarClient from './CalendarClient'
 
 export const metadata = { title: 'Calendar' }
 
 export default async function CalendarPage() {
-  const t = await getTranslations('events')
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  // Fetch 5-month window (prev + current + 3 future)
+  const windowStart = new Date()
+  windowStart.setMonth(windowStart.getMonth() - 1)
+  windowStart.setDate(1)
+  const windowEnd = new Date()
+  windowEnd.setMonth(windowEnd.getMonth() + 4)
+  windowEnd.setDate(0)
 
   const { data: events } = await supabase
     .from('events')
-    .select('id, title, title_ml, starts_at, ends_at, venue, group_id, groups(name, name_ml)')
-    .eq('visibility', 'public')
-    .gte('starts_at', new Date().toISOString())
+    .select('id, title, title_ml, starts_at, ends_at, venue, visibility, group_id, is_festival, created_by, groups(name, name_ml, group_type)')
+    .gte('starts_at', windowStart.toISOString())
+    .lte('starts_at', windowEnd.toISOString())
     .order('starts_at')
-    .limit(30)
+    .limit(200)
+
+  const { data: templates } = await supabase
+    .from('event_templates')
+    .select('id, name, name_ml, group_type_hint, default_time, default_venue, default_visibility, default_reminder_minutes, recurrence_suggestion, sort_order')
+    .eq('is_active', true)
+    .order('sort_order')
+
+  const { data: profileData } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  const { data: roleRow } = await supabase.from('parish_roles')
+    .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
+  const isAdmin = !!(profileData?.is_admin || roleRow)
 
   return (
-    <main className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-2xl font-bold text-brand-900 mb-6">{t('title')}</h1>
-      <div className="space-y-3">
-        {events?.map((event) => {
-          const group = (event.groups as unknown) as { name: string; name_ml?: string | null } | null
-          return (
-            <article key={event.id} className="rounded-xl border bg-card p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold">{event.title}</h2>
-                  {event.title_ml && (
-                    <p className="text-sm font-malayalam text-muted-foreground" lang="ml">
-                      {event.title_ml}
-                    </p>
-                  )}
-                  {event.venue && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      📍 {event.venue}
-                    </p>
-                  )}
-                  {group && (
-                    <p className="text-xs text-muted-foreground mt-1">{group.name}</p>
-                  )}
-                </div>
-                <div className="text-right text-sm shrink-0">
-                  <p className="font-medium">
-                    {new Date(event.starts_at).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {new Date(event.starts_at).toLocaleTimeString('en-IN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                </div>
-              </div>
-            </article>
-          )
-        })}
-        {(!events || events.length === 0) && (
-          <p className="text-center text-muted-foreground py-12">{t('noEvents')}</p>
-        )}
-      </div>
-    </main>
+    <CalendarClient
+      events={(events ?? []) as unknown as Parameters<typeof CalendarClient>[0]['events']}
+      templates={templates ?? []}
+      isAdmin={isAdmin}
+      currentUserId={user.id}
+    />
   )
 }
