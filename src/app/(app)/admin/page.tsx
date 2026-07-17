@@ -64,27 +64,21 @@ export default async function AdminPage() {
         <p className="text-sm text-muted-foreground mt-0.5">Super Admin — full access</p>
       </div>
 
-      {/* ── Wave 2 Tools ── */}
-      <section>
-        <h2 className="text-lg font-bold text-brand-900 mb-1">Wave 2 Tools</h2>
-        <p className="text-xs text-muted-foreground mb-3">
-          Requires migrations 011–013 to be run in Supabase. See System Definition §22.
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { href: '/admin/approvals', label: '📝 Approvals',  desc: 'Change request queue' },
-            { href: '/admin/registry',  label: '🏠 Registry',   desc: 'Households & life events' },
-            { href: '/admin/finance',   label: '₹ Finance',    desc: 'Dashboard & verification' },
-            { href: '/admin/roles',     label: '🛡 Roles',      desc: 'Grant / revoke staff roles' },
-          ].map(({ href, label, desc }) => (
-            <a key={href} href={href}
-              className="block rounded-xl border border-amber-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
-              <p className="font-semibold text-sm text-brand-900">{label}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{desc}</p>
-            </a>
-          ))}
-        </div>
-      </section>
+      {/* ── Quick links ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { href: '/admin/registry',  label: '🏠 Registry',   desc: 'Households & life events' },
+          { href: '/admin/approvals', label: '📝 Approvals',  desc: 'Change request queue' },
+          { href: '/admin/finance',   label: '₹ Finance',    desc: 'Dashboard & verification' },
+          { href: '/admin/roles',     label: '🛡 Roles',      desc: 'Grant / revoke staff roles' },
+        ].map(({ href, label, desc }) => (
+          <a key={href} href={href}
+            className="block rounded-xl border border-amber-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
+            <p className="font-semibold text-sm text-brand-900">{label}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{desc}</p>
+          </a>
+        ))}
+      </div>
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

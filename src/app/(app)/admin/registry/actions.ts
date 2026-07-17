@@ -15,6 +15,52 @@ async function requireAdminOrAbove() {
   return { supabase, userId: user.id }
 }
 
+export async function createHouseholdWithProfile(formData: FormData): Promise<{ error: string } | { id: string }> {
+  const { supabase } = await requireAdminOrAbove()
+
+  const profileId  = formData.get('profile_id') as string
+  const houseName  = (formData.get('house_name') as string).trim()
+  const groupId    = formData.get('prayer_group_id') as string
+  const address    = (formData.get('address') as string | null)?.trim() || null
+
+  // 1. Create family unit
+  const { data: fu, error: fuErr } = await supabase
+    .from('family_units')
+    .insert({ house_name: houseName, address, prayer_group_id: groupId })
+    .select('id').single()
+  if (fuErr) return { error: fuErr.message }
+
+  // 2. Get profile name for the family_member row
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('full_name, full_name_ml, date_of_birth')
+    .eq('id', profileId)
+    .single()
+
+  // 3. Create head family_member linked to the profile
+  const { data: fm, error: fmErr } = await supabase
+    .from('family_members')
+    .insert({
+      family_id:        fu.id,
+      profile_id:       profileId,
+      full_name:        prof?.full_name ?? 'Unknown',
+      full_name_ml:     prof?.full_name_ml ?? null,
+      relation_to_head: 'head',
+      date_of_birth:    prof?.date_of_birth ?? null,
+    })
+    .select('id').single()
+  if (fmErr) return { error: fmErr.message }
+
+  // 4. Link the profile back
+  await supabase
+    .from('profiles')
+    .update({ family_member_id: fm.id, display_name: prof?.full_name, claim_status: 'approved' })
+    .eq('id', profileId)
+
+  revalidatePath('/admin/registry')
+  return { id: fu.id }
+}
+
 export async function createHousehold(formData: FormData): Promise<{ error: string } | { id: string }> {
   const { supabase } = await requireAdminOrAbove()
   const { data, error } = await supabase.from('family_units').insert({

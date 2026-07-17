@@ -49,6 +49,28 @@ export default async function RegistryPage() {
     memberCount: countByFamily[f.id] ?? 0,
   }))
 
+  // Unlinked profiles = registered accounts not yet attached to any family_member
+  const { data: allLinkedRaw } = await supabase
+    .from('family_members')
+    .select('profile_id')
+    .not('profile_id', 'is', null)
+  const linkedIds = new Set((allLinkedRaw ?? []).map(r => r.profile_id as string))
+
+  const { data: profilesRaw } = await supabase
+    .from('profiles')
+    .select('id, full_name, full_name_ml, phone, house_name')
+    .eq('status', 'active')
+    .order('full_name')
+  const unlinkedProfiles = (profilesRaw ?? [])
+    .filter(p => !linkedIds.has(p.id))
+    .map(p => ({
+      id: p.id,
+      full_name: p.full_name as string,
+      full_name_ml: p.full_name_ml as string | null,
+      phone: p.phone as string,
+      house_name: p.house_name as string | null,
+    }))
+
   return (
     <div className="max-w-lg md:max-w-5xl mx-auto px-4 py-6 space-y-5">
       <div>
@@ -57,7 +79,7 @@ export default async function RegistryPage() {
           {households.length} household{households.length !== 1 ? 's' : ''} · Search to find, or type a new name to create
         </p>
       </div>
-      <RegistrySearch households={households} prayerGroups={prayerGroups} />
+      <RegistrySearch households={households} prayerGroups={prayerGroups} unlinkedProfiles={unlinkedProfiles} />
     </div>
   )
 }
