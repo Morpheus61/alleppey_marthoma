@@ -102,7 +102,7 @@ export function LinkProfileButton({ memberId, memberName, profiles }: { memberId
     <div className="flex gap-2 mt-1">
       <select value={profileId} onChange={e => setProfileId(e.target.value)}
         className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-900">
-        <option value="">Select member account…</option>
+        <option value="">Confirm Member Account</option>
         {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name} ({p.phone})</option>)}
       </select>
       <button onClick={handleLink} disabled={!profileId || saving}
@@ -153,35 +153,22 @@ export function GroupEnrollForm({
   if (enrollable.length === 0) return null
 
   const functional = groups.filter(g => g.group_type !== 'prayer')
-  const prayer     = groups.filter(g => g.group_type === 'prayer')
 
   return (
     <div className="bg-white rounded-xl border border-amber-100 p-4 space-y-4">
       <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Add to a Group</p>
       <p className="text-[11px] text-muted-foreground -mt-2">
-        Prayer group membership is automatic via Bhagam assignment.
-        Use this to enrol specific family members in Choir, Youth, Committees, etc.
+        Members can belong to multiple groups. Prayer group (Bhagam) is set at household level and not shown here.
       </p>
 
-      {/* Group selector */}
+      {/* Group selector — prayer groups excluded (geographic, set at household level) */}
       <div>
         <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Group</label>
         <select value={groupId} onChange={e => setGroupId(e.target.value)} className={inp}>
           <option value="">Select group…</option>
-          {functional.length > 0 && (
-            <optgroup label="Functional / Youth">
-              {functional.map(g => (
-                <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
-              ))}
-            </optgroup>
-          )}
-          {prayer.length > 0 && (
-            <optgroup label="Prayer Groups (Bhagam)">
-              {prayer.map(g => (
-                <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
-              ))}
-            </optgroup>
-          )}
+          {functional.map(g => (
+            <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
+          ))}
         </select>
       </div>
 
