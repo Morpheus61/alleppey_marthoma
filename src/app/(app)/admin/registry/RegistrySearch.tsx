@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Search, Plus, UserPlus, ChevronDown, ChevronUp } from 'lucide-react'
-import { createHousehold, createHouseholdWithProfile } from './actions'
+import { Search, Plus, UserPlus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { createHousehold, createHouseholdWithProfile, deleteHousehold } from './actions'
 import { useRouter } from 'next/navigation'
 
 interface Household {
@@ -26,6 +26,7 @@ export default function RegistrySearch({
   const [showUnlinked, setShowUnlinked] = useState(unlinkedProfiles.length > 0)
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState<string | null>(null)
+  const [deletingId, setDeletingId]     = useState<string | null>(null)
 
   const filtered = query.trim().length < 1
     ? households
@@ -154,16 +155,31 @@ export default function RegistrySearch({
       {filtered.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map(h => (
-            <Link key={h.id} href={`/admin/registry/${h.id}`}
-              className="bg-white rounded-xl border border-amber-50 px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
-              <p className="font-semibold text-sm">{h.house_name}</p>
-              {h.house_name_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{h.house_name_ml}</p>}
-              {h.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{h.address}</p>}
-              <div className="flex items-center gap-2 mt-2">
-                {h.groups && <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{h.groups.name_ml ?? h.groups.name}</span>}
-                <span className="text-[10px] text-muted-foreground">{h.memberCount} member{h.memberCount !== 1 ? 's' : ''}</span>
-              </div>
-            </Link>
+            <div key={h.id} className="relative group bg-white rounded-xl border border-amber-50 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
+              <Link href={`/admin/registry/${h.id}`} className="block px-4 py-3 pr-10">
+                <p className="font-semibold text-sm">{h.house_name}</p>
+                {h.house_name_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{h.house_name_ml}</p>}
+                {h.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{h.address}</p>}
+                <div className="flex items-center gap-2 mt-2">
+                  {h.groups && <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{h.groups.name_ml ?? h.groups.name}</span>}
+                  <span className="text-[10px] text-muted-foreground">{h.memberCount} member{h.memberCount !== 1 ? 's' : ''}</span>
+                </div>
+              </Link>
+              <button
+                disabled={deletingId === h.id}
+                onClick={async () => {
+                  if (!window.confirm(`Delete "${h.house_name}"? This will remove all family members and cannot be undone.`)) return
+                  setDeletingId(h.id)
+                  const res = await deleteHousehold(h.id)
+                  setDeletingId(null)
+                  if ('error' in res) alert(res.error)
+                }}
+                className="absolute top-2 right-2 p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                title="Delete household"
+              >
+                {deletingId === h.id ? <span className="text-[10px]">…</span> : <Trash2 size={14} />}
+              </button>
+            </div>
           ))}
         </div>
       )}
