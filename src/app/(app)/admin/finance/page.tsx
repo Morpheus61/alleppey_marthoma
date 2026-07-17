@@ -48,6 +48,7 @@ export default async function FinanceDashboardPage() {
           { href: '/admin/finance/cash-entry', label: 'Record Cash',      badge: 0 },
           { href: '/admin/finance/collections',label: 'Collections',      badge: 0 },
           { href: '/admin/finance/arrears',    label: 'Arrears by Bhagam', badge: 0 },
+          { href: '/admin/finance/settings',   label: 'Settings (UPI/Bank)', badge: 0 },
           { href: '/admin/finance/reports',    label: 'Reports',           badge: 0 },
         ].map(({ href, label, badge }) => (
           <Link key={href} href={href}

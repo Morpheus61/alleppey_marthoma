@@ -19,12 +19,50 @@ export default async function MemberFinancePage() {
     .eq('profile_id', user.id)
     .maybeSingle()
 
+  // App settings (bank details, UPI)
+  const { data: settings } = await supabase.from('app_settings').select('key, value')
+  const setting = (key: string) => settings?.find(s => s.key === key)?.value ?? ''
+
   // Active contribution types
   const { data: types } = await supabase
     .from('contribution_types')
     .select('id, name, name_ml, kind, amount_mode, amount, period_start, period_end, target_amount, target_visibility, funds(name, name_ml)')
     .eq('is_active', true)
     .order('name')
+
+  // Masavari: fetch all entries for running account (no limit)
+  const masavariType = (types ?? []).find(t => t.kind === 'subscription')
+  const { data: masavariEntries } = (familyMember?.family_id && masavariType)
+    ? await supabase
+        .from('contribution_entries')
+        .select('id, status, receipt_number, period_month, amount')
+        .eq('family_id', familyMember.family_id)
+        .eq('contribution_type_id', masavariType.id)
+        .neq('status', 'rejected')
+    : { data: [] }
+
+  // Build Masavari month ledger
+  const startYear = parseInt(setting('masavari_start_year') || '2024')
+  const now = new Date()
+  const masavariMonths: { key: string; label: string; isoDate: string; status: 'verified'|'submitted'|'outstanding' }[] = []
+  if (masavariType) {
+    let d = new Date(startYear, 0, 1)
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    while (d <= currentMonth) {
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+      const isoDate = `${key}-01`
+      const entry = (masavariEntries ?? []).find(e => e.period_month?.startsWith(key))
+      masavariMonths.push({
+        key, isoDate,
+        label: d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+        status: entry ? (entry.status === 'verified' ? 'verified' : 'submitted') : 'outstanding',
+      })
+      d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+    }
+    masavariMonths.reverse() // newest first
+  }
+  const outstandingMonths = masavariMonths.filter(m => m.status === 'outstanding')
+  const outstandingAmt = outstandingMonths.length * (masavariType?.amount ?? 300)
 
   // Member's own payment history (if linked to a family)
   const { data: entries } = familyMember?.family_id
@@ -36,10 +74,7 @@ export default async function MemberFinancePage() {
         .limit(20)
     : { data: [] }
 
-  // App settings (bank details, UPI)
-  const { data: settings } = await supabase.from('app_settings').select('key, value')
-
-  const setting = (key: string) => settings?.find(s => s.key === key)?.value ?? ''
+  // App settings already fetched above
 
   const familyUnit = (familyMember?.family_units as unknown as { house_name: string; house_name_ml?: string | null } | null)
 
@@ -61,12 +96,62 @@ export default async function MemberFinancePage() {
         </div>
       )}
 
-      {/* Active collections */}
-      {(types ?? []).length > 0 && (
+      {/* ── Masavari running account ── */}
+      {masavariType && familyMember?.family_id && (
         <section>
-          <h2 className="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">Active Collections</h2>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-sm font-bold text-brand-900 uppercase tracking-wide">
+                {masavariType.name_ml
+                  ? <><span className="font-malayalam" lang="ml">{masavariType.name_ml}</span> — </>
+                  : ''}{masavariType.name}
+              </h2>
+              <p className="text-xs text-muted-foreground">₹{masavariType.amount}/month · mandatory</p>
+            </div>
+            {outstandingAmt > 0 && (
+              <div className="text-right">
+                <p className="font-bold text-red-600">₹{outstandingAmt}</p>
+                <p className="text-[10px] text-red-500">{outstandingMonths.length} month{outstandingMonths.length > 1 ? 's' : ''} due</p>
+              </div>
+            )}
+          </div>
+
+          {outstandingMonths.length > 0 && (
+            <Link href={`/finance/pay?type=${masavariType.id}&month=${outstandingMonths[outstandingMonths.length-1].isoDate}`}
+              className="block text-center text-sm font-semibold py-3 rounded-xl bg-brand-900 text-white hover:bg-brand-800 transition-colors mb-3">
+              Pay Oldest Due — {outstandingMonths[outstandingMonths.length-1].label} (₹{masavariType.amount})
+            </Link>
+          )}
+          {outstandingAmt === 0 && (
+            <p className="text-xs text-green-600 font-semibold mb-3">✓ All months paid up to date</p>
+          )}
+
+          <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            {masavariMonths.map(m => (
+              <div key={m.key} className="flex items-center justify-between bg-white rounded-xl border px-3 py-2">
+                <span className="text-sm">{m.label}</span>
+                <div className="flex items-center gap-2">
+                  {m.status === 'verified' && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✓ Verified</span>}
+                  {m.status === 'submitted' && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">⏳ Submitted</span>}
+                  {m.status === 'outstanding' && (
+                    <Link href={`/finance/pay?type=${masavariType.id}&month=${m.isoDate}`}
+                      className="text-[10px] bg-brand-900 text-white px-2 py-1 rounded-lg font-semibold hover:bg-brand-800">
+                      Pay ₹{masavariType.amount}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Other voluntary collections ── */}
+      {(types ?? []).filter(t => t.kind !== 'subscription').length > 0 && (
+        <section>
+          <h2 className="text-sm font-bold text-amber-700 uppercase tracking-wide mb-3">Voluntary Collections</h2>
           <div className="space-y-3">
-            {(types ?? []).map(t => {
+            {(types ?? []).filter(t => t.kind !== 'subscription').map(t => {
               const fund = (t.funds as unknown as { name: string; name_ml?: string | null } | null)
               return (
                 <div key={t.id} className="bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm">
