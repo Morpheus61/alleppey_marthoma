@@ -98,11 +98,18 @@ export function LinkProfileButton({ memberId, memberName, profiles }: { memberId
     </button>
   )
 
+  if (profiles.length === 0) return (
+    <div className="mt-1 flex items-center gap-2">
+      <span className="text-[10px] text-gray-400 italic">No registered accounts yet — member must sign up first</span>
+      <button onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+  )
+
   return (
     <div className="flex gap-2 mt-1">
       <select value={profileId} onChange={e => setProfileId(e.target.value)}
         className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-900">
-        <option value="">Confirm Member Account</option>
+        <option value="">Select account…</option>
         {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name} ({p.phone})</option>)}
       </select>
       <button onClick={handleLink} disabled={!profileId || saving}

@@ -135,7 +135,7 @@ export default async function HouseholdDetailPage({ params }: Props) {
                       <LinkProfileButton
                         memberId={m.id}
                         memberName={m.full_name}
-                        profiles={unlinkedProfiles}
+                        profiles={allProfiles ?? []}
                       />
                     )}
                   </div>
