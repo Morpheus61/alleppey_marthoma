@@ -45,3 +45,52 @@ export async function rejectPayment(id: string, reason: string): Promise<{ error
   revalidatePath('/admin/finance/verify')
   return { success: true }
 }
+
+// ── Collection type management ──────────────────────────────────────────────
+
+export async function createCollection(formData: FormData): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireFinance()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const amountRaw = formData.get('amount') as string | null
+  const { error } = await supabase.from('contribution_types').insert({
+    fund_id:      formData.get('fund_id') as string,
+    name:         (formData.get('name') as string).trim(),
+    name_ml:      (formData.get('name_ml') as string | null)?.trim() || null,
+    kind:         formData.get('kind') as string,
+    amount_mode:  formData.get('amount_mode') as string,
+    amount:       amountRaw ? parseFloat(amountRaw) : null,
+    period_start: (formData.get('period_start') as string | null) || null,
+    period_end:   (formData.get('period_end') as string | null) || null,
+    is_active:    true,
+    created_by:   user.id,
+  })
+  if (error) return { error: error.message }
+  revalidatePath('/admin/finance/collections')
+  return { success: true }
+}
+
+export async function updateCollection(id: string, formData: FormData): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireFinance()
+  const amountRaw = formData.get('amount') as string | null
+  const { error } = await supabase.from('contribution_types').update({
+    name:         (formData.get('name') as string).trim(),
+    name_ml:      (formData.get('name_ml') as string | null)?.trim() || null,
+    amount_mode:  formData.get('amount_mode') as string,
+    amount:       amountRaw ? parseFloat(amountRaw) : null,
+    period_start: (formData.get('period_start') as string | null) || null,
+    period_end:   (formData.get('period_end') as string | null) || null,
+  }).eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/admin/finance/collections')
+  return { success: true }
+}
+
+export async function toggleCollection(id: string, isActive: boolean): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireFinance()
+  const { error } = await supabase.from('contribution_types').update({ is_active: isActive }).eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/admin/finance/collections')
+  return { success: true }
+}
