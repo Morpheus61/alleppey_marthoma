@@ -7,6 +7,7 @@ import {
   createGroup, archiveGroup, unarchiveGroup,
   postAnnouncement,
 } from './actions'
+import { approveClaim, denyClaim } from '@/app/auth/claim/actions'
 import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
 import type { GroupOption } from '@/components/posts/BilingualPostComposer'
 
@@ -27,6 +28,7 @@ export default async function AdminPage() {
     { count: groupCount },
     { count: upcomingEvents },
     { data: pendingRaw },
+    { data: claimsRaw },
     { data: membersRaw },
     { data: groupsRaw },
   ] = await Promise.all([
@@ -34,14 +36,19 @@ export default async function AdminPage() {
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('groups').select('*', { count: 'exact', head: true }).eq('is_archived', false),
     supabase.from('events').select('*', { count: 'exact', head: true }).gte('starts_at', new Date().toISOString()).lte('starts_at', weekFromNow),
-    supabase.from('profiles').select('*').eq('status', 'pending').order('created_at'),
-    supabase.from('profiles').select('id,full_name,full_name_ml,phone,house_name,is_admin,status').in('status', ['active','disabled']).order('full_name'),
+    supabase.from('profiles').select('*').eq('status', 'pending').eq('claim_status', 'unclaimed').order('created_at'),
+    supabase.from('profiles')
+      .select('id, phone, display_name, family_member_id, family_members!family_member_id(full_name, full_name_ml, relation_to_head, family_units(house_name, groups!prayer_group_id(name, name_ml)))')
+      .eq('claim_status', 'pending_claim')
+      .order('created_at'),
+    supabase.from('profiles').select('id,display_name,full_name,full_name_ml,phone,house_name,is_admin,status').in('status', ['active','disabled']).order('display_name,full_name'),
     supabase.from('groups').select('id,name,name_ml,slug,group_type,is_archived').order('name'),
   ])
 
-  const pending  = (pendingRaw  as Profile[] | null) ?? []
-  const members  = (membersRaw  as Pick<Profile,'id'|'full_name'|'full_name_ml'|'phone'|'house_name'|'is_admin'|'status'>[] | null) ?? []
-  const groups   = (groupsRaw   as Pick<Group,'id'|'name'|'name_ml'|'slug'|'group_type'|'is_archived'>[] | null) ?? []
+  const pending      = (pendingRaw  as Profile[] | null) ?? []
+  const claims       = (claimsRaw   as unknown[]) ?? []
+  const members      = (membersRaw  as Pick<Profile,'id'|'display_name'|'full_name'|'full_name_ml'|'phone'|'house_name'|'is_admin'|'status'>[] | null) ?? []
+  const groups       = (groupsRaw   as Pick<Group,'id'|'name'|'name_ml'|'slug'|'group_type'|'is_archived'>[] | null) ?? []
   const activeGroups   = groups.filter(g => !g.is_archived)
   const archivedGroups = groups.filter(g => g.is_archived)
 
@@ -93,6 +100,42 @@ export default async function AdminPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Claims Queue ── */}
+      {claims.length > 0 && (
+        <section>
+          <h2 className="text-lg font-bold text-brand-900 mb-3 flex items-center gap-2">
+            Identity Claims
+            <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{claims.length}</span>
+          </h2>
+          <div className="space-y-2">
+            {(claims as Record<string, unknown>[]).map(c => {
+              const fm = c.family_members as Record<string, unknown> | null
+              const fu = fm?.family_units as Record<string, unknown> | null
+              const g  = fu?.groups as Record<string, unknown> | null
+              return (
+                <div key={c.id as string} className="flex items-center gap-3 bg-white rounded-xl border border-blue-100 px-4 py-3 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{c.phone as string}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Claiming: {fm?.full_name as string}
+                      {fm?.relation_to_head ? ` (${fm.relation_to_head})` : ''}
+                      {fu?.house_name ? ` · ${fu.house_name}` : ''}
+                      {g?.name_ml ? ` · ${g.name_ml}` : g?.name ? ` · ${g.name}` : ''}
+                    </p>
+                  </div>
+                  <form action={async () => { 'use server'; await approveClaim(c.id as string) }}>
+                    <button className={`${btn} bg-green-600 text-white hover:bg-green-700`}>Approve</button>
+                  </form>
+                  <form action={async () => { 'use server'; await denyClaim(c.id as string) }}>
+                    <button className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Deny</button>
+                  </form>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Pending Approvals ── */}
       {pending.length > 0 && (
