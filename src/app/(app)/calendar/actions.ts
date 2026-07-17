@@ -17,16 +17,17 @@ async function requireAdmin() {
 export async function createEvent(formData: FormData): Promise<{ error: string } | { id: string }> {
   const { supabase, userId } = await requireAdmin()
 
-  const title       = (formData.get('title') as string).trim()
-  const titleMl     = (formData.get('title_ml') as string | null)?.trim() || null
-  const startsAt    = formData.get('starts_at') as string
-  const endsAt      = (formData.get('ends_at') as string | null) || null
-  const venue       = (formData.get('venue') as string | null)?.trim() || null
-  const visibility  = (formData.get('visibility') as string) || 'public'
-  const groupId     = (formData.get('group_id') as string | null) || null
-  const isFestival  = formData.get('is_festival') === 'true'
-  const rrule       = (formData.get('rrule') as string | null)?.trim() || null
-  const reminderMin = parseInt(formData.get('reminder_minutes') as string) || 1440
+  const title          = (formData.get('title') as string).trim()
+  const titleMl        = (formData.get('title_ml') as string | null)?.trim() || null
+  const startsAt       = formData.get('starts_at') as string
+  const endsAt         = (formData.get('ends_at') as string | null) || null
+  const venue          = (formData.get('venue') as string | null)?.trim() || null
+  const visibility     = (formData.get('visibility') as string) || 'public'
+  const groupId        = (formData.get('group_id') as string | null) || null
+  const hostFamilyId   = (formData.get('host_family_id') as string | null) || null
+  const isFestival     = formData.get('is_festival') === 'true'
+  const rrule          = (formData.get('rrule') as string | null)?.trim() || null
+  const reminderMin    = parseInt(formData.get('reminder_minutes') as string) || 1440
 
   if (!title) return { error: 'Title is required' }
   if (!startsAt) return { error: 'Date/time is required' }
@@ -37,6 +38,7 @@ export async function createEvent(formData: FormData): Promise<{ error: string }
       title, title_ml: titleMl, starts_at: startsAt,
       ends_at: endsAt || null, venue, visibility,
       group_id: groupId || null,
+      host_family_id: hostFamilyId || null,
       is_festival: isFestival,
       rrule, reminder_minutes: reminderMin,
       created_by: userId,

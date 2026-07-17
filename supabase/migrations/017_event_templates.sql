@@ -2,9 +2,11 @@
 -- 017 — Event Templates + Calendar enhancements
 -- ============================================================
 
--- ── 1. is_festival on events ──────────────────────────────
+-- ── 1. is_festival + host_family_id on events ────────────
 alter table public.events
-  add column if not exists is_festival boolean not null default false;
+  add column if not exists is_festival     boolean not null default false;
+alter table public.events
+  add column if not exists host_family_id  uuid references public.family_units;
 
 -- ── 2. EVENT_TEMPLATES ────────────────────────────────────
 create table if not exists public.event_templates (

@@ -31,6 +31,19 @@ export default async function CalendarPage() {
     .eq('is_active', true)
     .order('sort_order')
 
+  // Prayer groups + all family units (for Prayer Meeting host-family picker)
+  const { data: prayerGroups } = await supabase
+    .from('groups')
+    .select('id, name, name_ml')
+    .eq('group_type', 'prayer')
+    .eq('is_archived', false)
+    .order('name')
+
+  const { data: familyUnits } = await supabase
+    .from('family_units')
+    .select('id, house_name, house_name_ml, prayer_group_id')
+    .order('house_name')
+
   const { data: profileData } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   const { data: roleRow } = await supabase.from('parish_roles')
     .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
@@ -40,6 +53,8 @@ export default async function CalendarPage() {
     <CalendarClient
       events={(events ?? []) as unknown as Parameters<typeof CalendarClient>[0]['events']}
       templates={templates ?? []}
+      prayerGroups={prayerGroups ?? []}
+      familyUnits={(familyUnits ?? []) as Parameters<typeof CalendarClient>[0]['familyUnits']}
       isAdmin={isAdmin}
       currentUserId={user.id}
     />

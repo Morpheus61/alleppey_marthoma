@@ -31,6 +31,17 @@ interface Template {
   recurrence_suggestion: string | null
   sort_order: number
 }
+interface PrayerGroup {
+  id: string
+  name: string
+  name_ml: string | null
+}
+interface FamilyUnit {
+  id: string
+  house_name: string
+  house_name_ml: string | null
+  prayer_group_id: string | null
+}
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -93,27 +104,34 @@ function eventColor(ev: CalEvent) {
 // EventSheet
 // ─────────────────────────────────────────────────────────────
 function EventSheet({
-  date, templates, onClose, currentUserId,
+  date, templates, prayerGroups, familyUnits, onClose, currentUserId,
 }: {
   date: string
   templates: Template[]
+  prayerGroups: PrayerGroup[]
+  familyUnits: FamilyUnit[]
   onClose: () => void
   currentUserId: string
 }) {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
-  const [title, setTitle]       = useState('')
-  const [titleMl, setTitleMl]   = useState('')
-  const [time, setTime]         = useState('08:30')
-  const [endTime, setEndTime]   = useState('')
-  const [venue, setVenue]       = useState('')
+  const [title, setTitle]           = useState('')
+  const [titleMl, setTitleMl]       = useState('')
+  const [time, setTime]             = useState('08:30')
+  const [endTime, setEndTime]       = useState('')
+  const [venue, setVenue]           = useState('')
   const [visibility, setVisibility] = useState<'public'|'members'>('public')
   const [recurrence, setRecurrence] = useState<'none'|'weekly'|'monthly'>('none')
   const [isFestival, setIsFestival] = useState(false)
   const [reminderMin, setReminderMin] = useState(1440)
-  const [saving, setSaving]     = useState(false)
-  const [error, setError]       = useState<string | null>(null)
-  const [mlLoading, setMlLoading] = useState(false)
+  const [prayerGroupId, setPrayerGroupId] = useState('')
+  const [hostFamilyId, setHostFamilyId]   = useState('')
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [mlLoading, setMlLoading]   = useState(false)
   const titleEnRef = useRef<HTMLInputElement>(null)
+
+  const isPrayerMeeting = selectedTemplate?.group_type_hint === 'prayer'
+  const filteredFamilies = familyUnits.filter(f => f.prayer_group_id === prayerGroupId)
 
   const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white'
 
@@ -135,27 +153,37 @@ function EventSheet({
     setVenue(t.default_venue ?? '')
     setVisibility(t.default_visibility as 'public'|'members')
     setReminderMin(t.default_reminder_minutes)
-    // Parse recurrence suggestion
     if (t.recurrence_suggestion?.includes('WEEKLY')) setRecurrence('weekly')
     else if (t.recurrence_suggestion?.includes('MONTHLY')) setRecurrence('monthly')
     else setRecurrence('none')
     setIsFestival(t.name.toLowerCase().includes('festival') || t.name.toLowerCase().includes('perunnal'))
+    // Reset prayer-meeting specific fields when switching templates
+    if (t.group_type_hint !== 'prayer') { setPrayerGroupId(''); setHostFamilyId('') }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) { setError('Title required'); return }
+    if (isPrayerMeeting && !prayerGroupId) { setError('Select a Prayer Group (Bhagam)'); return }
+    if (isPrayerMeeting && !hostFamilyId) { setError('Select the Host Family'); return }
     setSaving(true); setError(null)
     const startsAt = buildStartsAt(date, time)
     const endsAt   = endTime ? buildStartsAt(date, endTime) : null
+    // For prayer meeting, venue = host family house name
+    const hostFamily = familyUnits.find(f => f.id === hostFamilyId)
+    const resolvedVenue = isPrayerMeeting && hostFamily
+      ? `${hostFamily.house_name_ml ? hostFamily.house_name_ml + ' — ' : ''}${hostFamily.house_name}`
+      : venue
     const fd = new FormData()
     fd.set('title', title)
     fd.set('title_ml', titleMl)
     fd.set('starts_at', startsAt)
     if (endsAt) fd.set('ends_at', endsAt)
-    fd.set('venue', venue)
+    fd.set('venue', resolvedVenue)
     fd.set('visibility', visibility)
     fd.set('is_festival', String(isFestival))
+    if (isPrayerMeeting && prayerGroupId) fd.set('group_id', prayerGroupId)
+    if (isPrayerMeeting && hostFamilyId)  fd.set('host_family_id', hostFamilyId)
     const rrule = buildRRule(recurrence, date)
     if (rrule) fd.set('rrule', rrule)
     fd.set('reminder_minutes', String(reminderMin))
@@ -240,11 +268,13 @@ function EventSheet({
             </div>
           </div>
 
-          {/* Venue */}
-          <div>
-            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Venue</label>
-            <input value={venue} onChange={e => setVenue(e.target.value)} placeholder="Church, Parish Hall…" className={inp} />
-          </div>
+          {/* Venue — hidden for prayer meeting (auto-set to host family) */}
+          {!isPrayerMeeting && (
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Venue</label>
+              <input value={venue} onChange={e => setVenue(e.target.value)} placeholder="Church, Parish Hall…" className={inp} />
+            </div>
+          )}
 
           {/* Visibility */}
           <div className="grid grid-cols-2 gap-2">
@@ -379,10 +409,12 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
 // Main CalendarClient
 // ─────────────────────────────────────────────────────────────
 export default function CalendarClient({
-  events, templates, isAdmin, currentUserId,
+  events, templates, prayerGroups, familyUnits, isAdmin, currentUserId,
 }: {
   events: CalEvent[]
   templates: Template[]
+  prayerGroups: PrayerGroup[]
+  familyUnits: FamilyUnit[]
   isAdmin: boolean
   currentUserId: string
 }) {
@@ -555,6 +587,8 @@ export default function CalendarClient({
         <EventSheet
           date={sheetDate}
           templates={templates}
+          prayerGroups={prayerGroups}
+          familyUnits={familyUnits}
           onClose={() => setSheetDate(null)}
           currentUserId={currentUserId}
         />
