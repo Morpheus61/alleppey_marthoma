@@ -58,7 +58,7 @@ export default async function RegistryPage() {
 
   const { data: profilesRaw } = await supabase
     .from('profiles')
-    .select('id, full_name, full_name_ml, phone, house_name')
+    .select('id, full_name, full_name_ml, phone, house_name, address')
     .eq('status', 'active')
     .order('full_name')
   const unlinkedProfiles = (profilesRaw ?? [])
@@ -69,6 +69,7 @@ export default async function RegistryPage() {
       full_name_ml: p.full_name_ml as string | null,
       phone: p.phone as string,
       house_name: p.house_name as string | null,
+      address: p.address as string | null,
     }))
 
   return (

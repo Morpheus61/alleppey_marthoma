@@ -12,7 +12,7 @@ interface Household {
   groups: { name: string; name_ml: string | null } | null; memberCount: number
 }
 interface Group { id: string; name: string; name_ml: string | null }
-interface UnlinkedProfile { id: string; full_name: string; full_name_ml: string | null; phone: string; house_name: string | null }
+interface UnlinkedProfile { id: string; full_name: string; full_name_ml: string | null; phone: string; house_name: string | null; address: string | null }
 
 const inp = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 placeholder:text-gray-400'
 
@@ -120,7 +120,7 @@ export default function RegistrySearch({
                           </div>
                           <div>
                             <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Address</label>
-                            <input name="address" className={inp} placeholder="Street, Ward, Alappuzha" />
+                            <input name="address" defaultValue={p.address ?? ''} className={inp} placeholder="Street, Ward, Alappuzha" />
                           </div>
                           <div className="sm:col-span-2">
                             <label className="block text-[10px] font-semibold text-amber-700 uppercase mb-0.5">Bhagam / Prayer Group *</label>
