@@ -38,12 +38,16 @@ export async function createEvent(formData: FormData): Promise<{ error: string }
       title, title_ml: titleMl, starts_at: startsAt,
       ends_at: endsAt || null, venue, visibility,
       group_id: groupId || null,
-      host_family_id: hostFamilyId || null,
       is_festival: isFestival,
       rrule, reminder_minutes: reminderMin,
       created_by: userId,
     })
     .select('id').single()
+
+  // Backfill host_family_id separately — avoids schema cache errors on fresh deployments
+  if (!error && data?.id && hostFamilyId) {
+    await supabase.from('events').update({ host_family_id: hostFamilyId }).eq('id', data.id)
+  }
 
   if (error) return { error: error.message }
   revalidatePath('/calendar')
