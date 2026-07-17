@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { AddMemberForm, LinkProfileButton, GroupEnrollForm } from './FamilyComponents'
+import { AddMemberForm, LinkProfileButton, GroupEnrollSection } from './FamilyComponents'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -53,10 +53,20 @@ export default async function HouseholdDetailPage({ params }: Props) {
     .eq('is_archived', false)
     .order('group_type').order('name')
 
+  const functionalGroups = (allGroups ?? []).filter(g => g.group_type !== 'prayer')
+  const prayerGroups     = (allGroups ?? []).filter(g => g.group_type === 'prayer')
+
+  // Current group memberships for all linked members
+  const linkedProfileIds = (members ?? []).filter(m => m.profile_id).map(m => m.profile_id as string)
+  const { data: currentMemberships } = linkedProfileIds.length > 0
+    ? await supabase.from('group_memberships').select('group_id, user_id').in('user_id', linkedProfileIds)
+    : { data: [] as { group_id: string; user_id: string }[] }
+
   const group = (family.groups as unknown as { id: string; name: string; name_ml: string | null } | null)
-  const linkedMembersForEnrol = (members ?? []).map(m => ({
+  const membersForEnrol = (members ?? []).map(m => ({
     id: m.id,
     full_name: m.full_name,
+    relation_to_head: m.relation_to_head,
     profile_id: m.profile_id,
   }))
 
@@ -145,10 +155,14 @@ export default async function HouseholdDetailPage({ params }: Props) {
       {/* ── Add member form ── */}
       <AddMemberForm familyId={id} profiles={unlinkedProfiles} />
 
-      {/* ── Add to group — Feature 2 & 3 ── */}
-      <GroupEnrollForm
-        linkedMembers={linkedMembersForEnrol}
-        groups={allGroups ?? []}
+      {/* ── Group enrolment ── */}
+      <GroupEnrollSection
+        familyId={id}
+        currentPrayerGroupId={(family as { prayer_group_id?: string | null }).prayer_group_id ?? null}
+        members={membersForEnrol}
+        functionalGroups={functionalGroups}
+        prayerGroups={prayerGroups}
+        currentMemberships={currentMemberships ?? []}
       />
     </div>
   )

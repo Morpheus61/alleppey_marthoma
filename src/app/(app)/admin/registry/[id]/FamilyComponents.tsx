@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { addFamilyMember, linkProfileToMember, addMembersToGroup } from '../actions'
+import { addFamilyMember, linkProfileToMember, addMembersToGroup, updateHouseholdPrayerGroup, setMemberGroupMemberships } from '../actions'
 
 const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white placeholder:text-gray-400'
 
@@ -114,87 +114,158 @@ export function LinkProfileButton({ memberId, memberName, profiles }: { memberId
   )
 }
 
-/** Enrol selected family members into any group */
-export function GroupEnrollForm({
-  linkedMembers,
-  groups,
+/** Per-member row with group checkboxes */
+function MemberGroupRow({
+  member,
+  functionalGroups,
+  allFunctionalGroupIds,
+  initialGroupIds,
 }: {
-  linkedMembers: { id: string; full_name: string; profile_id: string | null }[]
-  groups: Group[]
+  member: { id: string; full_name: string; relation_to_head: string | null; profile_id: string | null }
+  functionalGroups: Group[]
+  allFunctionalGroupIds: string[]
+  initialGroupIds: Set<string>
 }) {
-  const enrollable = linkedMembers.filter(m => m.profile_id)
-  const [groupId, setGroupId] = useState('')
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState<Set<string>>(initialGroupIds)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function toggle(profileId: string) {
+  function toggle(groupId: string) {
     setSelected(prev => {
       const next = new Set(prev)
-      next.has(profileId) ? next.delete(profileId) : next.add(profileId)
+      next.has(groupId) ? next.delete(groupId) : next.add(groupId)
       return next
     })
   }
 
-  async function handleEnrol() {
-    if (!groupId) { setError('Choose a group first.'); return }
-    if (!selected.size) { setError('Select at least one person.'); return }
+  async function handleSave() {
+    if (!member.profile_id) return
     setSaving(true); setError(null)
-    const result = await addMembersToGroup(groupId, [...selected])
+    const result = await setMemberGroupMemberships(member.profile_id, [...selected], allFunctionalGroupIds)
     setSaving(false)
     if ('error' in result) { setError(result.error); return }
     setSaved(true)
-    setSelected(new Set())
-    setGroupId('')
     setTimeout(() => setSaved(false), 2500)
   }
 
-  if (enrollable.length === 0) return null
-
-  const functional = groups.filter(g => g.group_type !== 'prayer')
+  if (!member.profile_id) {
+    return (
+      <div className="rounded-xl border border-gray-100 px-4 py-3 bg-gray-50">
+        <p className="text-sm font-semibold text-gray-700">{member.full_name}
+          <span className="ml-2 text-xs font-normal text-muted-foreground capitalize">{member.relation_to_head ?? '—'}</span>
+        </p>
+        <p className="text-[11px] text-gray-400 mt-0.5 italic">Link an app account to assign to groups</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="bg-white rounded-xl border border-amber-100 p-4 space-y-4">
-      <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Add to a Group</p>
-      <p className="text-[11px] text-muted-foreground -mt-2">
-        Members can belong to multiple groups. Prayer group (Bhagam) is set at household level and not shown here.
-      </p>
-
-      {/* Group selector — prayer groups excluded (geographic, set at household level) */}
-      <div>
-        <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Group</label>
-        <select value={groupId} onChange={e => setGroupId(e.target.value)} className={inp}>
-          <option value="">Select group…</option>
-          {functional.map(g => (
-            <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
-          ))}
-        </select>
+    <div className="rounded-xl border border-gray-100 px-4 py-3 bg-white space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold">
+          {member.full_name}
+          <span className="ml-2 text-xs font-normal text-muted-foreground capitalize">{member.relation_to_head ?? '—'}</span>
+        </p>
+        <button onClick={handleSave} disabled={saving}
+          className="text-[11px] bg-brand-900 text-white px-3 py-1 rounded-lg hover:bg-brand-800 disabled:opacity-50 shrink-0">
+          {saving ? '…' : saved ? '✓ Saved' : 'Save'}
+        </button>
       </div>
-
-      {/* Member checkboxes */}
-      <div>
-        <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Which family members?</label>
-        <div className="space-y-1.5">
-          {enrollable.map(m => (
-            <label key={m.profile_id!} className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-gray-100 px-3 py-2 hover:bg-amber-50 transition-colors select-none">
-              <input
-                type="checkbox"
-                checked={selected.has(m.profile_id!)}
-                onChange={() => toggle(m.profile_id!)}
-                className="accent-brand-900"
-              />
-              <span className="text-sm font-medium">{m.full_name}</span>
-            </label>
-          ))}
-        </div>
+      <div className="flex flex-wrap gap-x-5 gap-y-2">
+        {functionalGroups.map(g => (
+          <label key={g.id} className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={selected.has(g.id)}
+              onChange={() => toggle(g.id)}
+              className="accent-brand-900 w-3.5 h-3.5"
+            />
+            <span className="text-xs">{g.name_ml ?? g.name}</span>
+          </label>
+        ))}
       </div>
-
       {error && <p className="text-xs text-red-600">{error}</p>}
-      <button onClick={handleEnrol} disabled={saving}
-        className="w-full rounded-xl bg-brand-900 text-white text-xs font-semibold py-2.5 hover:bg-brand-800 disabled:opacity-50 transition-colors">
-        {saving ? 'Adding to group…' : saved ? '✓ Added!' : 'Add Selected to Group →'}
-      </button>
+    </div>
+  )
+}
+
+/** Prayer-group dropdown (household-level) + per-member functional-group checkboxes */
+export function GroupEnrollSection({
+  familyId,
+  currentPrayerGroupId,
+  members,
+  functionalGroups,
+  prayerGroups,
+  currentMemberships,
+}: {
+  familyId: string
+  currentPrayerGroupId: string | null
+  members: { id: string; full_name: string; relation_to_head: string | null; profile_id: string | null }[]
+  functionalGroups: Group[]
+  prayerGroups: Group[]
+  currentMemberships: { group_id: string; user_id: string }[]
+}) {
+  const [prayerGroup, setPrayerGroup] = useState(currentPrayerGroupId ?? '')
+  const [prayerSaving, setPrayerSaving] = useState(false)
+  const [prayerSaved, setPrayerSaved] = useState(false)
+  const [prayerError, setPrayerError] = useState<string | null>(null)
+
+  async function handlePrayerSave() {
+    if (!prayerGroup) return
+    setPrayerSaving(true); setPrayerError(null)
+    const result = await updateHouseholdPrayerGroup(familyId, prayerGroup)
+    setPrayerSaving(false)
+    if ('error' in result) { setPrayerError(result.error); return }
+    setPrayerSaved(true)
+    setTimeout(() => setPrayerSaved(false), 2500)
+  }
+
+  const allFunctionalGroupIds = functionalGroups.map(g => g.id)
+
+  return (
+    <div className="space-y-4">
+      {/* ── Bhagam / Prayer Group (household-level dropdown) ── */}
+      <div className="bg-white rounded-xl border border-amber-100 p-4 space-y-2">
+        <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Bhagam / Prayer Group</p>
+        <p className="text-[11px] text-muted-foreground -mt-1">Geographically assigned to the household. One Bhagam per family.</p>
+        <div className="flex gap-2">
+          <select value={prayerGroup} onChange={e => setPrayerGroup(e.target.value)} className={`${inp} flex-1`}>
+            <option value="">Select Bhagam…</option>
+            {prayerGroups.map(g => (
+              <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
+            ))}
+          </select>
+          <button onClick={handlePrayerSave} disabled={!prayerGroup || prayerSaving}
+            className="rounded-xl bg-brand-900 text-white text-xs px-4 py-2 hover:bg-brand-800 disabled:opacity-50 shrink-0">
+            {prayerSaving ? '…' : prayerSaved ? '✓' : 'Update'}
+          </button>
+        </div>
+        {prayerError && <p className="text-xs text-red-600">{prayerError}</p>}
+      </div>
+
+      {/* ── Per-member group checkboxes (functional groups only) ── */}
+      {functionalGroups.length > 0 && (
+        <div className="bg-white rounded-xl border border-amber-100 p-4 space-y-3">
+          <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Group Memberships</p>
+          <p className="text-[11px] text-muted-foreground -mt-2">Each member can belong to multiple groups independently.</p>
+          <div className="space-y-2">
+            {members.map(m => (
+              <MemberGroupRow
+                key={m.id}
+                member={m}
+                functionalGroups={functionalGroups}
+                allFunctionalGroupIds={allFunctionalGroupIds}
+                initialGroupIds={new Set(
+                  currentMemberships
+                    .filter(cm => cm.user_id === m.profile_id)
+                    .map(cm => cm.group_id)
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -118,6 +118,66 @@ export async function addMembersToGroup(groupId: string, profileIds: string[]): 
   return { success: true }
 }
 
+/** Update the household's Bhagam / prayer group */
+export async function updateHouseholdPrayerGroup(familyId: string, groupId: string): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireAdminOrAbove()
+  const { error } = await supabase
+    .from('family_units')
+    .update({ prayer_group_id: groupId || null })
+    .eq('id', familyId)
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/registry/${familyId}`)
+  return { success: true }
+}
+
+/** Set a member's full functional-group memberships (add selected, remove deselected) */
+export async function setMemberGroupMemberships(
+  profileId: string,
+  selectedGroupIds: string[],
+  allFunctionalGroupIds: string[],
+): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireAdminOrAbove()
+
+  // Remove deselected functional-group memberships
+  const toRemove = allFunctionalGroupIds.filter(id => !selectedGroupIds.includes(id))
+  if (toRemove.length) {
+    const { error } = await supabase
+      .from('group_memberships')
+      .delete()
+      .eq('user_id', profileId)
+      .in('group_id', toRemove)
+    if (error) return { error: error.message }
+  }
+
+  // Upsert selected memberships
+  if (selectedGroupIds.length) {
+    const rows = selectedGroupIds.map(gid => ({
+      group_id: gid, user_id: profileId, role: 'member' as const, status: 'active' as const,
+    }))
+    const { error } = await supabase
+      .from('group_memberships')
+      .upsert(rows, { onConflict: 'group_id,user_id' })
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath('/admin/registry')
+  return { success: true }
+}
+
+export async function deleteHousehold(id: string): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireAdminOrAbove()
+  // unlink any profiles pointing to members of this household
+  const { data: members } = await supabase.from('family_members').select('id').eq('family_id', id)
+  if (members?.length) {
+    await supabase.from('profiles').update({ family_member_id: null, claim_status: 'unclaimed' })
+      .in('family_member_id', members.map(m => m.id))
+  }
+  const { error } = await supabase.from('family_units').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/admin/registry')
+  return { success: true }
+}
+
 export async function linkProfileToMember(memberId: string, profileId: string): Promise<{ error: string } | { success: true }> {
   const { supabase } = await requireAdminOrAbove()
   const { data: fm } = await supabase.from('family_members').select('family_id').eq('id', memberId).single()
