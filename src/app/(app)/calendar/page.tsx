@@ -27,7 +27,7 @@ export default async function CalendarPage() {
 
   const { data: templates } = await supabase
     .from('event_templates')
-    .select('id, name, name_ml, group_type_hint, default_time, default_venue, default_visibility, default_reminder_minutes, recurrence_suggestion, sort_order')
+    .select('id, name, name_ml, group_type_hint, default_time, default_venue, default_visibility, default_reminder_minutes, recurrence_suggestion, requires_host_family, sort_order')
     .eq('is_active', true)
     .order('sort_order')
 

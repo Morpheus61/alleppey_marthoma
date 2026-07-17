@@ -14,6 +14,29 @@ async function requireAdmin() {
   return { supabase, userId: user.id }
 }
 
+/**
+ * Check if caller can edit a specific event.
+ * - Admin / Super Admin: always yes
+ * - Prayer Group Secretary/Convenor (future role): yes for their group's events
+ */
+async function requireEventEditAccess(eventId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  const { data: r } = await supabase.from('parish_roles')
+    .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
+  const isAdmin = !!(p?.is_admin || r)
+
+  if (isAdmin) return { supabase, userId: user.id }
+
+  // TODO: when prayer group secretary role is added to parish_roles,
+  // check if user is secretary/convenor for the event's group_id.
+  // For now, non-admins cannot edit events.
+  redirect('/calendar')
+}
+
 export async function createEvent(formData: FormData): Promise<{ error: string } | { id: string }> {
   const { supabase, userId } = await requireAdmin()
 
@@ -59,5 +82,34 @@ export async function deleteEvent(id: string): Promise<{ error: string } | { suc
   const { error } = await supabase.from('events').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/calendar')
+  return { success: true }
+}
+
+export async function updateEvent(formData: FormData): Promise<{ error: string } | { success: true }> {
+  const id = (formData.get('id') as string).trim()
+  if (!id) return { error: 'Event ID is required' }
+
+  const { supabase } = await requireEventEditAccess(id)
+
+  const title       = (formData.get('title') as string).trim()
+  const titleMl     = (formData.get('title_ml') as string | null)?.trim() || null
+  const startsAt    = formData.get('starts_at') as string
+  const endsAt      = (formData.get('ends_at') as string | null) || null
+  const venue       = (formData.get('venue') as string | null)?.trim() || null
+  const visibility  = (formData.get('visibility') as string) || 'public'
+  const isFestival  = formData.get('is_festival') === 'true'
+  const reminderMin = parseInt(formData.get('reminder_minutes') as string) || 1440
+
+  if (!title) return { error: 'Title is required' }
+  if (!startsAt) return { error: 'Date/time is required' }
+
+  const { error } = await supabase
+    .from('events')
+    .update({ title, title_ml: titleMl, starts_at: startsAt, ends_at: endsAt || null, venue, visibility, is_festival: isFestival, reminder_minutes: reminderMin })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/calendar')
+  revalidatePath('/')
   return { success: true }
 }

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, X, Plus } from 'lucide-react'
-import { createEvent, deleteEvent } from './actions'
+import { ChevronLeft, ChevronRight, X, Plus, Pencil } from 'lucide-react'
+import { createEvent, deleteEvent, updateEvent } from './actions'
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -29,6 +29,7 @@ interface Template {
   default_visibility: string
   default_reminder_minutes: number
   recurrence_suggestion: string | null
+  requires_host_family: boolean
   sort_order: number
 }
 interface PrayerGroup {
@@ -131,6 +132,7 @@ function EventSheet({
   const titleEnRef = useRef<HTMLInputElement>(null)
 
   const isPrayerMeeting = selectedTemplate?.group_type_hint === 'prayer'
+  const requiresHostFamily = selectedTemplate?.requires_host_family === true
   const filteredFamilies = familyUnits.filter(f => f.prayer_group_id === prayerGroupId)
 
   const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white'
@@ -158,20 +160,21 @@ function EventSheet({
     else setRecurrence('none')
     setIsFestival(t.name.toLowerCase().includes('festival') || t.name.toLowerCase().includes('perunnal'))
     // Reset prayer-meeting specific fields when switching templates
-    if (t.group_type_hint !== 'prayer') { setPrayerGroupId(''); setHostFamilyId('') }
+    if (t.group_type_hint !== 'prayer') { setPrayerGroupId(''); setHostFamilyId(''); setVenue(t.default_venue ?? '') }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) { setError('Title required'); return }
     if (isPrayerMeeting && !prayerGroupId) { setError('Select a Prayer Group (Bhagam)'); return }
-    if (isPrayerMeeting && !hostFamilyId) { setError('Select the Host Family'); return }
+    if (isPrayerMeeting && requiresHostFamily && !hostFamilyId) { setError('Select the Host Family'); return }
     setSaving(true); setError(null)
     const startsAt = buildStartsAt(date, time)
     const endsAt   = endTime ? buildStartsAt(date, endTime) : null
-    // For prayer meeting, venue = host family house name
+    // For regular prayer meeting, venue = host family house name
+    // For special prayer, venue is entered as free text (already in `venue` state)
     const hostFamily = familyUnits.find(f => f.id === hostFamilyId)
-    const resolvedVenue = isPrayerMeeting && hostFamily
+    const resolvedVenue = (isPrayerMeeting && requiresHostFamily && hostFamily)
       ? `${hostFamily.house_name_ml ? hostFamily.house_name_ml + ' — ' : ''}${hostFamily.house_name}`
       : venue
     const fd = new FormData()
@@ -242,7 +245,9 @@ function EventSheet({
           {/* Prayer Meeting: Bhagam + Host Family — only when group_type_hint = 'prayer' */}
           {isPrayerMeeting && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
-              <p className="text-[10px] font-bold text-amber-800 uppercase">Prayer Meeting Details</p>
+              <p className="text-[10px] font-bold text-amber-800 uppercase">
+                {requiresHostFamily ? 'Prayer Meeting Details' : 'Special Prayer Details'}
+              </p>
               <div>
                 <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Bhagam / Prayer Group *</label>
                 <select value={prayerGroupId} onChange={e => { setPrayerGroupId(e.target.value); setHostFamilyId('') }}
@@ -253,23 +258,34 @@ function EventSheet({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
-                  Host Family *
-                  {prayerGroupId && filteredFamilies.length === 0 && (
-                    <span className="ml-2 text-red-500 font-normal normal-case">No families linked to this Bhagam yet</span>
-                  )}
-                </label>
-                <select value={hostFamilyId} onChange={e => setHostFamilyId(e.target.value)}
-                  disabled={!prayerGroupId} className={`${inp} disabled:opacity-50`}>
-                  <option value="">Select host family…</option>
-                  {filteredFamilies.map(f => (
-                    <option key={f.id} value={f.id}>
-                      {f.house_name_ml ? `${f.house_name_ml} — ` : ''}{f.house_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Host family — only for regular Prayer Meeting, not Special Prayer */}
+              {requiresHostFamily && (
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                    Host Family *
+                    {prayerGroupId && filteredFamilies.length === 0 && (
+                      <span className="ml-2 text-red-500 font-normal normal-case">No families linked to this Bhagam yet</span>
+                    )}
+                  </label>
+                  <select value={hostFamilyId} onChange={e => setHostFamilyId(e.target.value)}
+                    disabled={!prayerGroupId} className={`${inp} disabled:opacity-50`}>
+                    <option value="">Select host family…</option>
+                    {filteredFamilies.map(f => (
+                      <option key={f.id} value={f.id}>
+                        {f.house_name_ml ? `${f.house_name_ml} — ` : ''}{f.house_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* Venue — for Special Prayer, allow free-form entry */}
+              {!requiresHostFamily && (
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Venue (Home / Church / Other)</label>
+                  <input value={venue} onChange={e => setVenue(e.target.value)}
+                    placeholder="Host home, Church, Parish Hall…" className={inp} />
+                </div>
+              )}
             </div>
           )}
 
@@ -303,7 +319,8 @@ function EventSheet({
             </div>
           </div>
 
-          {/* Venue — hidden for prayer meeting (auto-set to host family) */}
+          {/* Venue — hidden for regular prayer meeting (auto-set to host family);
+               also hidden for special prayer (venue captured in prayer details block) */}
           {!isPrayerMeeting && (
             <div>
               <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Venue</label>
@@ -369,6 +386,163 @@ function EventSheet({
 }
 
 // ─────────────────────────────────────────────────────────────
+// EditEventSheet
+// ─────────────────────────────────────────────────────────────
+function EditEventSheet({ ev, onClose }: { ev: CalEvent; onClose: () => void }) {
+  // Parse stored time from ISO string (HH:MM in +05:30 offset)
+  function extractISTTime(isoStr: string): string {
+    // isoStr is stored as YYYY-MM-DDTHH:MM:SS+05:30
+    const timePart = isoStr.slice(11, 16) // 'HH:MM'
+    return timePart
+  }
+  function extractISTDate(isoStr: string): string {
+    return isoStr.slice(0, 10) // 'YYYY-MM-DD'
+  }
+
+  const [title, setTitle]           = useState(ev.title)
+  const [titleMl, setTitleMl]       = useState(ev.title_ml ?? '')
+  const [date, setDate]             = useState(extractISTDate(ev.starts_at))
+  const [time, setTime]             = useState(extractISTTime(ev.starts_at))
+  const [endTime, setEndTime]       = useState(ev.ends_at ? extractISTTime(ev.ends_at) : '')
+  const [venue, setVenue]           = useState(ev.venue ?? '')
+  const [visibility, setVisibility] = useState<'public'|'members'>(ev.visibility as 'public'|'members')
+  const [isFestival, setIsFestival] = useState(ev.is_festival)
+  const [reminderMin, setReminderMin] = useState(1440)
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [mlLoading, setMlLoading]   = useState(false)
+  const titleEnRef = useRef<HTMLInputElement>(null)
+
+  const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white'
+
+  async function handleTransliterate() {
+    const text = titleEnRef.current?.value ?? ''
+    if (!text) return
+    setMlLoading(true)
+    const res = await fetch(`/api/transliterate?text=${encodeURIComponent(text)}`)
+    const json = await res.json()
+    if (json.result) setTitleMl(json.result)
+    setMlLoading(false)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim()) { setError('Title required'); return }
+    setSaving(true); setError(null)
+    const startsAt = buildStartsAt(date, time)
+    const endsAt   = endTime ? buildStartsAt(date, endTime) : null
+    const fd = new FormData()
+    fd.set('id', ev.id)
+    fd.set('title', title)
+    fd.set('title_ml', titleMl)
+    fd.set('starts_at', startsAt)
+    if (endsAt) fd.set('ends_at', endsAt)
+    fd.set('venue', venue)
+    fd.set('visibility', visibility)
+    fd.set('is_festival', String(isFestival))
+    fd.set('reminder_minutes', String(reminderMin))
+    const result = await updateEvent(fd)
+    setSaving(false)
+    if ('error' in result) { setError(result.error); return }
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end lg:items-stretch lg:justify-end" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-black/40 absolute inset-0" onClick={onClose} />
+      <div className="relative bg-white w-full lg:w-[420px] max-h-[90vh] lg:max-h-full overflow-y-auto rounded-t-2xl lg:rounded-none shadow-2xl z-10 flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Edit Event</p>
+            <p className="text-sm font-bold text-brand-900 truncate">{ev.title}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1"><X size={18} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-5 pt-4 pb-6 space-y-3 flex-1">
+          {/* Title */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2">
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Title (English) *</label>
+              <input ref={titleEnRef} value={title} onChange={e => setTitle(e.target.value)} required className={inp} />
+            </div>
+            <div className="col-span-2">
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="text-[10px] font-semibold text-amber-600 uppercase">Title (Malayalam)</label>
+                <button type="button" onClick={handleTransliterate} disabled={mlLoading}
+                  className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 hover:bg-amber-100 disabled:opacity-50">
+                  {mlLoading ? 'Transliterating…' : 'Type → മലയാളം'}
+                </button>
+              </div>
+              <input value={titleMl} onChange={e => setTitleMl(e.target.value)} className={`${inp} font-malayalam`} lang="ml" />
+            </div>
+          </div>
+
+          {/* Date */}
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Date *</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} required className={inp} />
+          </div>
+
+          {/* Time */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Start Time *</label>
+              <input type="time" value={time} onChange={e => setTime(e.target.value)} required className={inp} />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">End Time</label>
+              <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className={inp} />
+            </div>
+          </div>
+
+          {/* Venue */}
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Venue</label>
+            <input value={venue} onChange={e => setVenue(e.target.value)} placeholder="Church, Parish Hall…" className={inp} />
+          </div>
+
+          {/* Visibility */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Visibility</label>
+              <select value={visibility} onChange={e => setVisibility(e.target.value as 'public'|'members')} className={inp}>
+                <option value="public">Public</option>
+                <option value="members">Members only</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Reminder</label>
+              <select value={reminderMin} onChange={e => setReminderMin(Number(e.target.value))} className={inp}>
+                <option value={30}>30 min before</option>
+                <option value={60}>1 hour before</option>
+                <option value={360}>6 hours before</option>
+                <option value={1440}>1 day before</option>
+                <option value={2880}>2 days before</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Festival toggle */}
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input type="checkbox" checked={isFestival} onChange={e => setIsFestival(e.target.checked)}
+              className="accent-brand-900 w-4 h-4" />
+            <span className="text-sm">Mark as Festival / Perunnal</span>
+          </label>
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+
+          <button type="submit" disabled={saving}
+            className="w-full rounded-xl bg-brand-900 text-white text-sm font-semibold py-3 hover:bg-brand-800 disabled:opacity-50 transition-colors">
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
 // Day cell events preview
 // ─────────────────────────────────────────────────────────────
 function DayEventDots({ evs }: { evs: CalEvent[] }) {
@@ -394,6 +568,7 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
   isAdmin: boolean; currentUserId: string
 }) {
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [editingEvent, setEditingEvent] = useState<CalEvent | null>(null)
   const dispDate = new Date(day + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
 
   async function handleDelete(id: string) {
@@ -401,6 +576,15 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
     await deleteEvent(id)
     setDeleting(null)
     onClose()
+  }
+
+  if (editingEvent) {
+    return (
+      <EditEventSheet
+        ev={editingEvent}
+        onClose={() => { setEditingEvent(null); onClose() }}
+      />
+    )
   }
 
   return (
@@ -427,10 +611,16 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
                 </div>
               </div>
               {isAdmin && (
-                <button onClick={() => handleDelete(ev.id)} disabled={deleting === ev.id}
-                  className="text-[10px] text-red-400 hover:text-red-600 shrink-0 disabled:opacity-50">
-                  {deleting === ev.id ? '…' : 'Delete'}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setEditingEvent(ev)}
+                    className="text-[10px] text-brand-700 hover:text-brand-900 flex items-center gap-0.5">
+                    <Pencil size={11} /> Edit
+                  </button>
+                  <button onClick={() => handleDelete(ev.id)} disabled={deleting === ev.id}
+                    className="text-[10px] text-red-400 hover:text-red-600 disabled:opacity-50">
+                    {deleting === ev.id ? '…' : 'Delete'}
+                  </button>
+                </div>
               )}
             </div>
           ))}
