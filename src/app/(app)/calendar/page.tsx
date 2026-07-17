@@ -48,6 +48,7 @@ export default async function CalendarPage() {
   const { data: roleRow } = await supabase.from('parish_roles')
     .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
   const isAdmin = !!(profileData?.is_admin || roleRow)
+  const serverDate = new Date().toISOString().slice(0, 10)  // 'YYYY-MM-DD', stable for hydration
 
   return (
     <CalendarClient
@@ -57,6 +58,7 @@ export default async function CalendarPage() {
       familyUnits={(familyUnits ?? []) as Parameters<typeof CalendarClient>[0]['familyUnits']}
       isAdmin={isAdmin}
       currentUserId={user.id}
+      serverDate={serverDate}
     />
   )
 }

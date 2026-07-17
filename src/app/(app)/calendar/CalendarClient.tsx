@@ -238,6 +238,41 @@ function EventSheet({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-5 pt-2 pb-6 space-y-3 flex-1">
+
+          {/* Prayer Meeting: Bhagam + Host Family — only when group_type_hint = 'prayer' */}
+          {isPrayerMeeting && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+              <p className="text-[10px] font-bold text-amber-800 uppercase">Prayer Meeting Details</p>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Bhagam / Prayer Group *</label>
+                <select value={prayerGroupId} onChange={e => { setPrayerGroupId(e.target.value); setHostFamilyId('') }}
+                  className={inp}>
+                  <option value="">Select Bhagam…</option>
+                  {prayerGroups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                  Host Family *
+                  {prayerGroupId && filteredFamilies.length === 0 && (
+                    <span className="ml-2 text-red-500 font-normal normal-case">No families linked to this Bhagam yet</span>
+                  )}
+                </label>
+                <select value={hostFamilyId} onChange={e => setHostFamilyId(e.target.value)}
+                  disabled={!prayerGroupId} className={`${inp} disabled:opacity-50`}>
+                  <option value="">Select host family…</option>
+                  {filteredFamilies.map(f => (
+                    <option key={f.id} value={f.id}>
+                      {f.house_name_ml ? `${f.house_name_ml} — ` : ''}{f.house_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           {/* Title */}
           <div className="grid grid-cols-2 gap-2">
             <div className="col-span-2">
@@ -409,7 +444,7 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
 // Main CalendarClient
 // ─────────────────────────────────────────────────────────────
 export default function CalendarClient({
-  events, templates, prayerGroups, familyUnits, isAdmin, currentUserId,
+  events, templates, prayerGroups, familyUnits, isAdmin, currentUserId, serverDate,
 }: {
   events: CalEvent[]
   templates: Template[]
@@ -417,10 +452,11 @@ export default function CalendarClient({
   familyUnits: FamilyUnit[]
   isAdmin: boolean
   currentUserId: string
+  serverDate: string   // 'YYYY-MM-DD' — passed from server to avoid hydration mismatch
 }) {
-  const today = new Date()
-  const [year, setYear]   = useState(today.getFullYear())
-  const [month, setMonth] = useState(today.getMonth())
+  const d = new Date(serverDate + 'T00:00:00')
+  const [year, setYear]   = useState(d.getFullYear())
+  const [month, setMonth] = useState(d.getMonth())
   const [sheetDate, setSheetDate] = useState<string | null>(null)
   const [detailDate, setDetailDate] = useState<string | null>(null)
 
@@ -436,7 +472,7 @@ export default function CalendarClient({
   }, [events])
 
   const cells = getMonthDays(year, month)
-  const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
+  const todayStr = serverDate  // stable — same on server and client
 
   function prevMonth() {
     if (month === 0) { setYear(y => y - 1); setMonth(11) }
@@ -547,11 +583,11 @@ export default function CalendarClient({
       {/* Upcoming list */}
       <div className="mt-8 space-y-2">
         <h2 className="text-base font-bold text-brand-900 mb-3">Upcoming Events</h2>
-        {events.filter(ev => ev.starts_at >= today.toISOString()).length === 0 ? (
+        {events.filter(ev => ev.starts_at >= serverDate).length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">No upcoming events</p>
         ) : (
           events
-            .filter(ev => ev.starts_at >= today.toISOString())
+            .filter(ev => ev.starts_at >= serverDate)
             .slice(0, 10)
             .map(ev => (
               <div key={ev.id} className={`rounded-xl border px-4 py-3 shadow-sm flex gap-3 items-start ${ev.is_festival ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
