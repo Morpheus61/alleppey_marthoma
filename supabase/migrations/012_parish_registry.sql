@@ -243,16 +243,19 @@ create policy "family_members: admin read"
     )
   );
 
+-- Security-definer helper avoids RLS self-recursion on family_members
+create or replace function public.my_family_ids()
+  returns setof uuid
+  language sql security definer stable
+  set search_path = public
+as $$
+  select family_id from public.family_members where profile_id = auth.uid()
+$$;
+
 create policy "family_members: member read own family"
   on public.family_members for select
   to authenticated
-  using (
-    exists (
-      select 1 from public.family_members fm2
-      where fm2.family_id = family_id
-        and fm2.profile_id = auth.uid()
-    )
-  );
+  using (family_id in (select public.my_family_ids()));
 
 -- ============================================================
 -- RLS: LIFE EVENTS
