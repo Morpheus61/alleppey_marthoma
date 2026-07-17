@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { AddMemberForm, LinkProfileButton, GroupEnrollSection } from './FamilyComponents'
+import { AddMemberForm, LinkProfileButton, GroupEnrollSection, UnlinkButton, MemberLifeEvents } from './FamilyComponents'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -25,7 +25,7 @@ export default async function HouseholdDetailPage({ params }: Props) {
 
   const { data: members } = await supabase
     .from('family_members')
-    .select('id, full_name, full_name_ml, relation_to_head, date_of_birth, gender, is_deceased, profile_id, profiles!profile_id(full_name, phone)')
+    .select('id, full_name, full_name_ml, relation_to_head, date_of_birth, gender, is_deceased, profile_id, phone, email, profiles!profile_id(full_name, phone)')
     .eq('family_id', id)
     .order('relation_to_head')
 
@@ -61,6 +61,22 @@ export default async function HouseholdDetailPage({ params }: Props) {
   const { data: currentMemberships } = linkedProfileIds.length > 0
     ? await supabase.from('group_memberships').select('group_id, user_id').in('user_id', linkedProfileIds)
     : { data: [] as { group_id: string; user_id: string }[] }
+
+  // Life event types + events for all family members
+  const { data: lifeEventTypes } = await supabase
+    .from('life_event_types')
+    .select('id, name, name_ml')
+    .eq('is_active', true)
+    .order('sort_order')
+
+  const memberIds = (members ?? []).map(m => m.id)
+  const { data: lifeEvents } = memberIds.length > 0
+    ? await supabase
+        .from('life_events')
+        .select('id, family_member_id, event_date, event_type, life_event_type_id')
+        .in('family_member_id', memberIds)
+        .order('event_date')
+    : { data: [] as { id: string; family_member_id: string; event_date: string | null; event_type: string | null; life_event_type_id: string | null }[] }
 
   const group = (family.groups as unknown as { id: string; name: string; name_ml: string | null } | null)
   const membersForEnrol = (members ?? []).map(m => ({
@@ -112,6 +128,7 @@ export default async function HouseholdDetailPage({ params }: Props) {
         <div className="space-y-2">
           {(members ?? []).map(m => {
             const linkedProfile = (m.profiles as unknown as { full_name: string; phone: string } | null)
+            const memberEvents  = (lifeEvents ?? []).filter(e => e.family_member_id === m.id)
             return (
               <div key={m.id} className={`bg-white rounded-xl border px-4 py-3 shadow-sm ${m.is_deceased ? 'opacity-50' : ''}`}>
                 <div className="flex items-start justify-between gap-2">
@@ -125,11 +142,18 @@ export default async function HouseholdDetailPage({ params }: Props) {
                       {m.date_of_birth ? ` · ${new Date(m.date_of_birth).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}` : ''}
                       {m.gender ? ` · ${m.gender}` : ''}
                     </p>
+                    {(m.phone || m.email) && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {m.phone && <span className="mr-2">📱 {m.phone}</span>}
+                        {m.email && <span>✉ {m.email}</span>}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     {linkedProfile ? (
-                      <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-0.5 text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
                         ✓ {linkedProfile.phone}
+                        <UnlinkButton memberId={m.id} familyId={id} />
                       </span>
                     ) : (
                       <LinkProfileButton
@@ -140,6 +164,11 @@ export default async function HouseholdDetailPage({ params }: Props) {
                     )}
                   </div>
                 </div>
+                <MemberLifeEvents
+                  memberId={m.id}
+                  events={memberEvents}
+                  eventTypes={lifeEventTypes ?? []}
+                />
               </div>
             )
           })}

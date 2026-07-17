@@ -85,6 +85,8 @@ export async function addFamilyMember(formData: FormData): Promise<{ error: stri
     relation_to_head: (formData.get('relation_to_head') as string | null)?.trim() || null,
     date_of_birth:    (formData.get('date_of_birth') as string | null) || null,
     gender:           (formData.get('gender') as string | null) || null,
+    phone:            (formData.get('phone') as string | null)?.trim() || null,
+    email:            (formData.get('email') as string | null)?.trim() || null,
   })
   if (error) return { error: error.message }
   revalidatePath(`/admin/registry/${formData.get('family_id')}`)
@@ -173,6 +175,39 @@ export async function deleteHousehold(id: string): Promise<{ error: string } | {
       .in('family_member_id', members.map(m => m.id))
   }
   const { error } = await supabase.from('family_units').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/admin/registry')
+  return { success: true }
+}
+
+/** Remove an account link from a family member */
+export async function unlinkProfileFromMember(memberId: string, familyId: string): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireAdminOrAbove()
+  // Clear family_member_id on the profile first
+  await supabase.from('profiles').update({ family_member_id: null, claim_status: 'unclaimed' }).eq('family_member_id', memberId)
+  const { error } = await supabase.from('family_members').update({ profile_id: null }).eq('id', memberId)
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/registry/${familyId}`)
+  return { success: true }
+}
+
+/** Record a life event for a family member */
+export async function addLifeEvent(
+  memberId: string,
+  typeId: string,
+  eventDate: string | null,
+  notes: string | null,
+): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireAdminOrAbove()
+  // Get the type name for the legacy event_type text field
+  const { data: t } = await supabase.from('life_event_types').select('name').eq('id', typeId).single()
+  const { error } = await supabase.from('life_events').insert({
+    family_member_id:    memberId,
+    life_event_type_id:  typeId,
+    event_type:          t?.name ?? null,
+    event_date:          eventDate || null,
+    notes:               notes || null,
+  })
   if (error) return { error: error.message }
   revalidatePath('/admin/registry')
   return { success: true }

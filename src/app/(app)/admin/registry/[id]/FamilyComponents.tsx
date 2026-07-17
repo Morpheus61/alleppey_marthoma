@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { addFamilyMember, linkProfileToMember, addMembersToGroup, updateHouseholdPrayerGroup, setMemberGroupMemberships } from '../actions'
+import { addFamilyMember, linkProfileToMember, addMembersToGroup, updateHouseholdPrayerGroup, setMemberGroupMemberships, unlinkProfileFromMember, addLifeEvent } from '../actions'
 
 const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white placeholder:text-gray-400'
 
@@ -61,6 +61,14 @@ export function AddMemberForm({ familyId, profiles }: { familyId: string; profil
           <input type="date" name="date_of_birth" className={inp} />
         </div>
         <div>
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Mobile / WhatsApp</label>
+          <input name="phone" type="tel" placeholder="+91 XXXXX XXXXX" className={inp} />
+        </div>
+        <div className="col-span-2 sm:col-span-1">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Email (optional)</label>
+          <input name="email" type="email" placeholder="name@example.com" className={inp} />
+        </div>
+        <div>
           <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Link App Account (optional)</label>
           <select name="profile_id" className={inp}>
             <option value="">No linked account</option>
@@ -117,6 +125,107 @@ export function LinkProfileButton({ memberId, memberName, profiles }: { memberId
         {saving ? '…' : 'Link'}
       </button>
       <button onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+  )
+}
+
+/** Remove a profile link from a family member */
+export function UnlinkButton({ memberId, familyId }: { memberId: string; familyId: string }) {
+  const [confirming, setConfirming] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  async function handleUnlink() {
+    setLoading(true)
+    await unlinkProfileFromMember(memberId, familyId)
+    setLoading(false)
+  }
+
+  if (!confirming) return (
+    <button onClick={() => setConfirming(true)} title="Unlink this account"
+      className="ml-1 text-[10px] text-red-300 hover:text-red-600 transition-colors">✕</button>
+  )
+
+  return (
+    <span className="text-[10px] text-red-600 ml-1">
+      Unlink?{' '}
+      <button onClick={handleUnlink} disabled={loading} className="underline font-semibold">Yes</button>
+      {' '}
+      <button onClick={() => setConfirming(false)} className="text-gray-400 underline">No</button>
+    </span>
+  )
+}
+
+/** Life events list + inline add form for a single family member */
+export function MemberLifeEvents({
+  memberId,
+  events,
+  eventTypes,
+}: {
+  memberId: string
+  events: { id: string; event_date: string | null; life_event_type_id: string | null; event_type: string | null }[]
+  eventTypes: { id: string; name: string; name_ml: string | null }[]
+}) {
+  const [adding, setAdding] = useState(false)
+  const [typeId, setTypeId] = useState('')
+  const [date, setDate] = useState('')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleAdd() {
+    if (!typeId) { setError('Select an event type'); return }
+    setSaving(true); setError(null)
+    const result = await addLifeEvent(memberId, typeId, date || null, notes || null)
+    setSaving(false)
+    if ('error' in result) { setError(result.error); return }
+    setAdding(false); setTypeId(''); setDate(''); setNotes('')
+  }
+
+  const typeName = (id: string | null) =>
+    eventTypes.find(t => t.id === id)?.name_ml
+    ?? eventTypes.find(t => t.id === id)?.name
+    ?? 'Event'
+
+  return (
+    <div className="mt-2 pt-2 border-t border-gray-100">
+      {events.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-1.5">
+          {events.map(e => (
+            <span key={e.id} className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-2 py-0.5">
+              {typeName(e.life_event_type_id) ?? e.event_type ?? 'Event'}
+              {e.event_date ? ` · ${new Date(e.event_date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}` : ''}
+            </span>
+          ))}
+        </div>
+      )}
+      {!adding ? (
+        <button onClick={() => setAdding(true)}
+          className="text-[10px] text-blue-600 hover:text-blue-800 underline">+ Life Event</button>
+      ) : (
+        <div className="space-y-1.5 mt-1">
+          <div className="flex gap-2 flex-wrap">
+            <select value={typeId} onChange={e => setTypeId(e.target.value)}
+              className="flex-1 min-w-0 rounded-lg border border-gray-200 px-2 py-1 text-xs">
+              <option value="">Event type…</option>
+              {eventTypes.map(t => (
+                <option key={t.id} value={t.id}>{t.name_ml ? `${t.name_ml} — ` : ''}{t.name}</option>
+              ))}
+            </select>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="rounded-lg border border-gray-200 px-2 py-1 text-xs" />
+          </div>
+          <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)"
+            className="w-full rounded-lg border border-gray-200 px-2 py-1 text-xs" />
+          {error && <p className="text-[10px] text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button onClick={handleAdd} disabled={saving}
+              className="rounded-lg bg-brand-900 text-white text-[11px] px-3 py-1 hover:bg-brand-800 disabled:opacity-50">
+              {saving ? '…' : 'Add Event'}
+            </button>
+            <button onClick={() => setAdding(false)} className="text-[11px] text-gray-400 hover:text-gray-600">Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
