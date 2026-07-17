@@ -19,9 +19,14 @@ export async function POST(req: NextRequest) {
 
   let phone = '', otp = ''
   try {
-    const payload = JSON.parse(rawBody)
+    const payload = JSON.parse(rawBody) as {
+      user?: { phone?: string }
+      sms?: { otp?: string | number; phone?: string }      // actual GoTrue field name
+      sms_data?: { otp?: string | number }                 // documented (wrong) field name
+      phone?: string; otp?: string
+    }
     phone = payload.user?.phone ?? payload.phone ?? ''
-    otp   = String(payload.sms_data?.otp ?? payload.otp ?? '')
+    otp   = String(payload.sms?.otp ?? payload.sms_data?.otp ?? payload.otp ?? '')
     console.log(`[send-otp] phone="${phone}" otp="${otp}"`)
   } catch (e) {
     console.error('[send-otp] JSON parse error:', e)
