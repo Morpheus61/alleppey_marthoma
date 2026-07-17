@@ -9,15 +9,33 @@ export default async function MemberFinancePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: profileData } = await supabase.from('profiles').select('status').eq('id', user.id).single()
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('status, family_member_id')
+    .eq('id', user.id).single()
   if (profileData?.status !== 'active') redirect('/')
 
-  // Find the member's family
-  const { data: familyMember } = await supabase
-    .from('family_members')
-    .select('family_id, family_units(house_name, house_name_ml)')
-    .eq('profile_id', user.id)
-    .maybeSingle()
+  // Find the member's family — prefer profiles.family_member_id (more reliable than family_members.profile_id)
+  let familyMember: { family_id: string; family_units: unknown } | null = null
+
+  if (profileData?.family_member_id) {
+    const { data: fm } = await supabase
+      .from('family_members')
+      .select('family_id, family_units(house_name, house_name_ml)')
+      .eq('id', profileData.family_member_id)
+      .maybeSingle()
+    familyMember = fm
+  }
+
+  // Fallback: check family_members.profile_id (covers older accounts)
+  if (!familyMember) {
+    const { data: fm } = await supabase
+      .from('family_members')
+      .select('family_id, family_units(house_name, house_name_ml)')
+      .eq('profile_id', user.id)
+      .maybeSingle()
+    familyMember = fm
+  }
 
   // App settings (bank details, UPI)
   const { data: settings } = await supabase.from('app_settings').select('key, value')
