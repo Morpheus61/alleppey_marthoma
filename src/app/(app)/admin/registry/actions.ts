@@ -77,7 +77,7 @@ export async function createHousehold(formData: FormData): Promise<{ error: stri
 export async function addFamilyMember(formData: FormData): Promise<{ error: string } | { success: true }> {
   const { supabase } = await requireAdminOrAbove()
   const profileId = (formData.get('profile_id') as string | null)?.trim() || null
-  const { error } = await supabase.from('family_members').insert({
+  const { data: fm, error } = await supabase.from('family_members').insert({
     family_id:        formData.get('family_id') as string,
     profile_id:       profileId || null,
     full_name:        (formData.get('full_name') as string).trim(),
@@ -87,8 +87,17 @@ export async function addFamilyMember(formData: FormData): Promise<{ error: stri
     gender:           (formData.get('gender') as string | null) || null,
     phone:            (formData.get('phone') as string | null)?.trim() || null,
     email:            (formData.get('email') as string | null)?.trim() || null,
-  })
+  }).select('id').single()
   if (error) return { error: error.message }
+
+  // If a profile was linked at creation time, update profiles.family_member_id too
+  if (profileId && fm?.id) {
+    await supabase
+      .from('profiles')
+      .update({ family_member_id: fm.id, claim_status: 'approved' })
+      .eq('id', profileId)
+  }
+
   revalidatePath(`/admin/registry/${formData.get('family_id')}`)
   return { success: true }
 }
@@ -217,8 +226,18 @@ export async function linkProfileToMember(memberId: string, profileId: string): 
   const { supabase } = await requireAdminOrAbove()
   const { data: fm } = await supabase.from('family_members').select('family_id').eq('id', memberId).single()
   if (!fm) return { error: 'Family member not found' }
+
+  // 1. Set family_members.profile_id
   const { error } = await supabase.from('family_members').update({ profile_id: profileId }).eq('id', memberId)
   if (error) return { error: error.message }
+
+  // 2. Set profiles.family_member_id (bidirectional — required by finance page & RLS)
+  await supabase
+    .from('profiles')
+    .update({ family_member_id: memberId, claim_status: 'approved' })
+    .eq('id', profileId)
+
   revalidatePath(`/admin/registry/${fm.family_id}`)
+  revalidatePath('/finance')
   return { success: true }
 }
