@@ -37,7 +37,7 @@ export default async function ReportsPage() {
   // Group verified by type
   const typeMap = new Map<string, { name: string; name_ml: string | null; kind: string; total: number; count: number }>()
   for (const e of verified) {
-    const ct = e.contribution_types as { name: string; name_ml: string | null; kind: string } | null
+    const ct = e.contribution_types as unknown as { name: string; name_ml: string | null; kind: string } | null
     if (!ct || !e.contribution_type_id) continue
     if (!typeMap.has(e.contribution_type_id)) typeMap.set(e.contribution_type_id, { name: ct.name, name_ml: ct.name_ml, kind: ct.kind, total: 0, count: 0 })
     const t = typeMap.get(e.contribution_type_id)!
@@ -115,8 +115,8 @@ export default async function ReportsPage() {
         <h2 className="text-sm font-bold text-brand-900 uppercase tracking-wide mb-3">Recent Verified Payments</h2>
         <div className="space-y-2">
           {(recent ?? []).map(e => {
-            const fu = e.family_units as { house_name: string; house_name_ml: string | null } | null
-            const ct = e.contribution_types as { name: string; name_ml: string | null } | null
+            const fu = e.family_units as unknown as { house_name: string; house_name_ml: string | null } | null
+            const ct = e.contribution_types as unknown as { name: string; name_ml: string | null } | null
             return (
               <div key={e.id} className="flex items-center gap-3 bg-white rounded-xl border border-amber-50 px-4 py-2.5 shadow-sm">
                 <div className="flex-1 min-w-0">
