@@ -134,11 +134,14 @@ export async function approveChangeRequest(requestId: string) {
   if (error) return { error: error.message }
 
   revalidatePath('/admin/approvals')
+  revalidatePath('/')
   return { success: true }
 }
 
-export async function rejectChangeRequest(requestId: string, remarks: string) {
+export async function rejectChangeRequest(formData: FormData) {
   const { supabase, userId } = await requireSuperAdmin()
+  const requestId = formData.get('requestId') as string
+  const remarks   = (formData.get('remarks') as string | null)?.trim() || 'Rejected'
 
   const { error } = await supabase
     .from('change_requests')
