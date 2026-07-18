@@ -53,15 +53,17 @@ async function requireAdminOrAbove() {
 
 // ── Role Management (super_admin only) ────────────────────────────────────────
 
-export async function assignRole(profileId: string, role: ParishRoleKind) {
+export async function assignRole(formData: FormData): Promise<void> {
   const { supabase, userId } = await requireSuperAdmin()
+  const profileId = formData.get('profile_id') as string
+  const role      = formData.get('role') as ParishRoleKind
+  if (!profileId || !role) return
 
-  const { error } = await supabase.from('parish_roles').insert({
+  await supabase.from('parish_roles').insert({
     profile_id:  profileId,
     role,
     assigned_by: userId,
   })
-  if (error) return { error: error.message }
 
   await supabase.from('audit_log').insert({
     actor_id:     userId,
@@ -72,19 +74,18 @@ export async function assignRole(profileId: string, role: ParishRoleKind) {
   })
 
   revalidatePath('/admin/roles')
-  return { success: true }
 }
 
-export async function revokeRole(roleId: string) {
+export async function revokeRole(formData: FormData): Promise<void> {
   const { supabase, userId } = await requireSuperAdmin()
+  const roleId = formData.get('roleId') as string
+  if (!roleId) return
 
-  const { error } = await supabase
+  await supabase
     .from('parish_roles')
     .update({ revoked_by: userId, revoked_at: new Date().toISOString() })
     .eq('id', roleId)
     .is('revoked_at', null)
-
-  if (error) return { error: error.message }
 
   await supabase.from('audit_log').insert({
     actor_id:     userId,
@@ -95,7 +96,6 @@ export async function revokeRole(roleId: string) {
   })
 
   revalidatePath('/admin/roles')
-  return { success: true }
 }
 
 // ── Change Requests ───────────────────────────────────────────────────────────

@@ -9,8 +9,10 @@ export default async function CashEntryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
   const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  // Deacons (collection helpers) are also allowed here
   const { data: r } = await supabase.from('parish_roles')
-    .select('role').eq('profile_id', user.id).in('role', ['treasurer','admin','super_admin']).is('revoked_at', null).maybeSingle()
+    .select('role').eq('profile_id', user.id)
+    .in('role', ['deacon','treasurer','admin','super_admin']).is('revoked_at', null).maybeSingle()
   if (!p?.is_admin && !r) redirect('/admin')
 
   const { data: types } = await supabase
@@ -26,13 +28,26 @@ export default async function CashEntryPage() {
 
   const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white'
 
+  const isDeaconOnly = r?.role === 'deacon' && !p?.is_admin
+
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
       <div>
         <a href="/admin/finance" className="text-xs text-muted-foreground hover:text-foreground mb-3 block">← Finance Dashboard</a>
         <h1 className="text-2xl font-bold text-brand-900">Record Cash Payment</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Directly record a cash receipt — auto-verified</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {isDeaconOnly
+            ? 'Entry will be submitted for Treasurer verification before the receipt is issued.'
+            : 'Directly record a cash receipt — auto-verified and receipt issued immediately.'}
+        </p>
       </div>
+
+      {isDeaconOnly && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+          <p className="font-semibold">Deacon / Collection Helper</p>
+          <p className="text-xs mt-0.5">Your entry will be marked <strong>Pending</strong> until the Treasurer verifies and tallies the cash. The Treasurer then submits to the Vicar for final approval.</p>
+        </div>
+      )}
 
       <form action={recordCashEntry} className="bg-white rounded-xl border border-amber-100 p-5 space-y-4">
         <div>
