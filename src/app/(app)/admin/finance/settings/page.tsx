@@ -26,10 +26,7 @@ export default async function FinanceSettingsPage() {
         <p className="text-sm text-muted-foreground mt-0.5">UPI/bank details and collection configuration</p>
       </div>
 
-      <form action={async (fd: FormData) => {
-        'use server'
-        await updateSettings(fd)
-      }} className="space-y-5">
+      <form action={updateSettings} className="space-y-5">
         <section className="bg-white rounded-xl border border-amber-100 p-4 space-y-3">
           <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">UPI Details</p>
           <div>

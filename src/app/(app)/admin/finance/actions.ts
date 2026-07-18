@@ -15,19 +15,6 @@ async function requireFinance() {
   return { supabase }
 }
 
-export async function updateSettings(formData: FormData): Promise<{ error: string } | { success: true }> {
-  const { supabase } = await requireFinance()
-  const keys = ['church_upi_id','church_upi_name','church_bank_name','church_bank_account','church_bank_ifsc','receipt_prefix','masavari_start_year']
-  for (const key of keys) {
-    const val = (formData.get(key) as string | null) ?? ''
-    const { error } = await supabase.from('app_settings')
-      .upsert({ key, value: val }, { onConflict: 'key' })
-    if (error) return { error: error.message }
-  }
-  revalidatePath('/admin/finance/settings')
-  return { success: true }
-}
-
 export async function verifyPayment(id: string): Promise<{ error: string } | { success: true }> {
   const { supabase } = await requireFinance()
   const { error } = await supabase.from('contribution_entries')
@@ -93,4 +80,52 @@ export async function toggleCollection(id: string, isActive: boolean): Promise<{
   if (error) return { error: error.message }
   revalidatePath('/admin/finance/collections')
   return { success: true }
+}
+
+export async function recordCashEntry(formData: FormData): Promise<{ error: string } | { success: true }> {
+  const { supabase } = await requireFinance()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const typeId     = formData.get('contribution_type_id') as string
+  const familyId   = formData.get('family_id') as string
+  const amountRaw  = formData.get('amount') as string
+  const periodRaw  = (formData.get('period_month') as string | null) || null
+  const notes      = (formData.get('notes') as string | null)?.trim() || null
+
+  if (!typeId || !familyId || !amountRaw) return { error: 'Type, family and amount are required' }
+  const amount = parseFloat(amountRaw)
+  if (isNaN(amount) || amount <= 0) return { error: 'Invalid amount' }
+
+  // Generate receipt number
+  const { data: setting } = await supabase.from('app_settings').select('value').eq('key', 'receipt_prefix').maybeSingle()
+  const prefix = setting?.value || 'SGM-C-'
+  const receipt_number = `${prefix}${Date.now()}`
+
+  const { error } = await supabase.from('contribution_entries').insert({
+    contribution_type_id: typeId,
+    family_id:            familyId,
+    amount,
+    channel:              'cash',
+    period_month:         periodRaw ? `${periodRaw}-01` : null,
+    status:               'verified',
+    receipt_number,
+    recorded_by:          user.id,
+    verified_by:          user.id,
+    verified_at:          new Date().toISOString(),
+  })
+  if (error) return { error: error.message }
+  revalidatePath('/admin/finance')
+  revalidatePath('/admin/finance/cash-entry')
+  return { success: true }
+}
+
+export async function updateSettings(formData: FormData): Promise<void> {
+  const { supabase } = await requireFinance()
+  const keys = ['church_upi_id','church_upi_name','church_bank_name','church_bank_account','church_bank_ifsc','receipt_prefix','masavari_start_year']
+  for (const key of keys) {
+    const val = (formData.get(key) as string | null) ?? ''
+    await supabase.from('app_settings').upsert({ key, value: val }, { onConflict: 'key' })
+  }
+  revalidatePath('/admin/finance/settings')
 }
