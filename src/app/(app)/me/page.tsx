@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { Profile, GroupMembership, Group } from '@/types/database'
 import ProfileCard from '@/components/directory/ProfileCard'
+import FamilyMembersSection, { type FamilyMemberRow } from './FamilyMembersSection'
 import { updateMyProfile, updateMyPhoto } from './actions'
 
 export const metadata = { title: 'My Profile' }
@@ -33,6 +34,26 @@ export default async function ProfilePage() {
     .maybeSingle()
   const prayerGroup = (prayerGroupData as unknown as { family_units: { groups: { id: string; name: string; name_ml: string | null } | null } | null } | null)
     ?.family_units?.groups ?? null
+
+  // Family members in the same household (for editing)
+  let familyMembers: FamilyMemberRow[] = []
+  if (prayerGroupData) {
+    // Get the family_id from the user's own family_member record
+    const { data: myFm } = await supabase
+      .from('family_members')
+      .select('family_id')
+      .eq('profile_id', user.id)
+      .maybeSingle()
+    if (myFm?.family_id) {
+      const { data: fms } = await supabase
+        .from('family_members')
+        .select('id, full_name, full_name_ml, relation_to_head, date_of_birth, gender, phone, email, is_deceased')
+        .eq('family_id', myFm.family_id)
+        .eq('is_deceased', false)
+        .order('relation_to_head')
+      familyMembers = (fms ?? []) as FamilyMemberRow[]
+    }
+  }
 
   return (
     <div className="max-w-lg md:max-w-2xl mx-auto px-4 py-6 space-y-6">
@@ -80,6 +101,9 @@ export default async function ProfilePage() {
           </div>
         </section>
       )}
+
+      {/* Family members with inline edit */}
+      <FamilyMembersSection members={familyMembers} />
 
       {/* Profile — view mode by default; Edit button reveals form */}
       <ProfileCard

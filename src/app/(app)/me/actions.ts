@@ -5,6 +5,45 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { FamilyMember } from '@/types/database'
 
+/**
+ * Submit a change request for a family member record.
+ * Does NOT update family_members directly — Admin reviews and approves via /admin/approvals.
+ */
+export async function requestFamilyMemberChange(
+  memberId: string,
+  currentData: Record<string, unknown>,
+  formData: FormData,
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const proposed: Record<string, string | null> = {
+    full_name:        (formData.get('full_name') as string).trim(),
+    full_name_ml:     (formData.get('full_name_ml') as string | null)?.trim() || null,
+    relation_to_head: (formData.get('relation_to_head') as string | null) || null,
+    date_of_birth:    (formData.get('date_of_birth') as string | null) || null,
+    gender:           (formData.get('gender') as string | null) || null,
+    phone:            (formData.get('phone') as string | null)?.trim() || null,
+    email:            (formData.get('email') as string | null)?.trim() || null,
+  }
+
+  if (!proposed.full_name) return { error: 'Name is required' }
+
+  const { error } = await supabase.from('change_requests').insert({
+    target_table:  'family_members',
+    target_id:     memberId,
+    change_type:   'update',
+    current_data:  currentData,
+    proposed_data: proposed,
+    requested_by:  user.id,
+  })
+
+  if (error) return { error: error.message }
+  revalidatePath('/me')
+  return { success: true }
+}
+
 export async function updateMyProfile(formData: FormData): Promise<{ error: string } | { success: true }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
