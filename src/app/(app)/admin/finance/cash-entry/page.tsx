@@ -55,7 +55,7 @@ export default async function CashEntryPage() {
           <select name="family_id" required className={inp}>
             <option value="">Select household…</option>
             {(families ?? []).map(f => {
-              const grp = f.groups as { name: string; name_ml: string | null } | null
+              const grp = f.groups as unknown as { name: string; name_ml: string | null } | null
               return (
                 <option key={f.id} value={f.id}>
                   {f.house_name_ml ? `${f.house_name_ml} / ` : ''}{f.house_name}
