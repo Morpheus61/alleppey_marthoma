@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'My Subscriptions' }
 
 export default async function MemberFinancePage() {
@@ -15,26 +16,41 @@ export default async function MemberFinancePage() {
     .eq('id', user.id).single()
   if (profileData?.status !== 'active') redirect('/')
 
-  // Find the member's family — prefer profiles.family_member_id (more reliable than family_members.profile_id)
-  let familyMember: { family_id: string; family_units: unknown } | null = null
+  // ── Resolve family_id via two simple queries (no embedded joins that can fail silently) ──
+  let familyId: string | null = null
 
+  // Primary: profiles.family_member_id → family_members.family_id
   if (profileData?.family_member_id) {
-    const { data: fm } = await supabase
+    const { data: fm, error: fmErr } = await supabase
       .from('family_members')
-      .select('family_id, family_units(house_name, house_name_ml)')
+      .select('family_id')
       .eq('id', profileData.family_member_id)
       .maybeSingle()
-    familyMember = fm
+    if (fmErr) console.error('[Finance] family_members primary lookup error:', fmErr.message)
+    familyId = fm?.family_id ?? null
   }
 
-  // Fallback: check family_members.profile_id (covers older accounts)
-  if (!familyMember) {
-    const { data: fm } = await supabase
+  // Fallback: family_members.profile_id = user.id
+  if (!familyId) {
+    const { data: fm, error: fmErr } = await supabase
       .from('family_members')
-      .select('family_id, family_units(house_name, house_name_ml)')
+      .select('family_id')
       .eq('profile_id', user.id)
       .maybeSingle()
-    familyMember = fm
+    if (fmErr) console.error('[Finance] family_members fallback lookup error:', fmErr.message)
+    familyId = fm?.family_id ?? null
+  }
+
+  // Fetch family unit name separately (no join = no RLS join complications)
+  let familyUnit: { house_name: string; house_name_ml: string | null } | null = null
+  if (familyId) {
+    const { data: fu, error: fuErr } = await supabase
+      .from('family_units')
+      .select('house_name, house_name_ml')
+      .eq('id', familyId)
+      .maybeSingle()
+    if (fuErr) console.error('[Finance] family_units lookup error:', fuErr.message)
+    familyUnit = fu
   }
 
   // App settings (bank details, UPI)
@@ -50,11 +66,11 @@ export default async function MemberFinancePage() {
 
   // Masavari: fetch all entries for running account (no limit)
   const masavariType = (types ?? []).find(t => t.kind === 'subscription')
-  const { data: masavariEntries } = (familyMember?.family_id && masavariType)
+  const { data: masavariEntries } = (familyId && masavariType)
     ? await supabase
         .from('contribution_entries')
         .select('id, status, receipt_number, period_month, amount')
-        .eq('family_id', familyMember.family_id)
+        .eq('family_id', familyId)
         .eq('contribution_type_id', masavariType.id)
         .neq('status', 'rejected')
     : { data: [] }
@@ -82,19 +98,15 @@ export default async function MemberFinancePage() {
   const outstandingMonths = masavariMonths.filter(m => m.status === 'outstanding')
   const outstandingAmt = outstandingMonths.length * (masavariType?.amount ?? 300)
 
-  // Member's own payment history (if linked to a family)
-  const { data: entries } = familyMember?.family_id
+  // Member's own payment history
+  const { data: entries } = familyId
     ? await supabase
         .from('contribution_entries')
         .select('id, amount, channel, status, receipt_number, period_month, created_at, contribution_type_id')
-        .eq('family_id', familyMember.family_id)
+        .eq('family_id', familyId)
         .order('created_at', { ascending: false })
         .limit(20)
     : { data: [] }
-
-  // App settings already fetched above
-
-  const familyUnit = (familyMember?.family_units as unknown as { house_name: string; house_name_ml?: string | null } | null)
 
   return (
     <div className="max-w-lg md:max-w-2xl mx-auto px-4 py-6 space-y-6">
@@ -108,14 +120,14 @@ export default async function MemberFinancePage() {
         )}
       </div>
 
-      {!familyMember && (
+      {!familyId && (
         <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
           Your profile is not yet linked to a household record. Contact the church office to link your account.
         </div>
       )}
 
       {/* ── Masavari running account ── */}
-      {masavariType && familyMember?.family_id && (
+      {masavariType && familyId && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -189,7 +201,7 @@ export default async function MemberFinancePage() {
                       Window closes: {new Date(t.period_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                   )}
-                  {familyMember?.family_id && (
+                  {familyId && (
                     <Link href={`/finance/pay?type=${t.id}`}
                       className="mt-2 block text-center text-xs font-semibold py-2 rounded-lg bg-brand-900 text-white hover:bg-brand-800 transition-colors">
                       Pay Now
