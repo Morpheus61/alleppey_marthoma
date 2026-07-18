@@ -82,25 +82,36 @@ export async function toggleCollection(id: string, isActive: boolean): Promise<{
   return { success: true }
 }
 
-export async function recordCashEntry(formData: FormData): Promise<{ error: string } | { success: true }> {
-  const { supabase } = await requireFinance()
+export async function recordCashEntry(formData: FormData): Promise<void> {
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  if (!user) return
 
-  const typeId     = formData.get('contribution_type_id') as string
-  const familyId   = formData.get('family_id') as string
-  const amountRaw  = formData.get('amount') as string
-  const periodRaw  = (formData.get('period_month') as string | null) || null
-  const notes      = (formData.get('notes') as string | null)?.trim() || null
+  // Determine caller's role — deacons submit for Treasurer approval; others verify immediately
+  const { data: roleRow } = await supabase.from('parish_roles')
+    .select('role').eq('profile_id', user.id)
+    .in('role', ['deacon','treasurer','admin','super_admin'])
+    .is('revoked_at', null).order('role').limit(1).maybeSingle()
+  const { data: pData } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  const isDeacon = roleRow?.role === 'deacon' && !pData?.is_admin
+  const canVerify = pData?.is_admin || (roleRow && roleRow.role !== 'deacon')
+  if (!roleRow && !pData?.is_admin) return
 
-  if (!typeId || !familyId || !amountRaw) return { error: 'Type, family and amount are required' }
+  const typeId    = formData.get('contribution_type_id') as string
+  const familyId  = formData.get('family_id') as string
+  const amountRaw = formData.get('amount') as string
+  const periodRaw = (formData.get('period_month') as string | null) || null
+
+  if (!typeId || !familyId || !amountRaw) return
   const amount = parseFloat(amountRaw)
-  if (isNaN(amount) || amount <= 0) return { error: 'Invalid amount' }
+  if (isNaN(amount) || amount <= 0) return
 
-  // Generate receipt number
-  const { data: setting } = await supabase.from('app_settings').select('value').eq('key', 'receipt_prefix').maybeSingle()
-  const prefix = setting?.value || 'SGM-C-'
-  const receipt_number = `${prefix}${Date.now()}`
+  // Only generate receipt number for immediately-verified entries
+  let receipt_number: string | null = null
+  if (canVerify) {
+    const { data: setting } = await supabase.from('app_settings').select('value').eq('key', 'receipt_prefix').maybeSingle()
+    receipt_number = `${setting?.value || 'SGM-C-'}${Date.now()}`
+  }
 
   const { error } = await supabase.from('contribution_entries').insert({
     contribution_type_id: typeId,
@@ -108,16 +119,16 @@ export async function recordCashEntry(formData: FormData): Promise<{ error: stri
     amount,
     channel:              'cash',
     period_month:         periodRaw ? `${periodRaw}-01` : null,
-    status:               'verified',
+    status:               canVerify ? 'verified' : 'submitted',
     receipt_number,
     recorded_by:          user.id,
-    verified_by:          user.id,
-    verified_at:          new Date().toISOString(),
+    verified_by:          canVerify ? user.id : null,
+    verified_at:          canVerify ? new Date().toISOString() : null,
   })
-  if (error) return { error: error.message }
+  if (error) console.error('[recordCashEntry]', error.message)
   revalidatePath('/admin/finance')
   revalidatePath('/admin/finance/cash-entry')
-  return { success: true }
+  revalidatePath('/admin/finance/verify')
 }
 
 export async function updateSettings(formData: FormData): Promise<void> {
