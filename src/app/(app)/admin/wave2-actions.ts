@@ -126,10 +126,11 @@ export async function submitChangeRequest(formData: FormData) {
   return { success: true }
 }
 
-export async function approveChangeRequest(requestId: string) {
-  const { supabase, userId } = await requireSuperAdmin()
+export async function approveChangeRequest(formData: FormData) {
+  const { supabase } = await requireSuperAdmin()
+  const requestId = formData.get('requestId') as string
+  if (!requestId) return { error: 'Missing request ID' }
 
-  // Call the stored procedure
   const { error } = await supabase.rpc('apply_change_request', { p_request_id: requestId })
   if (error) return { error: error.message }
 

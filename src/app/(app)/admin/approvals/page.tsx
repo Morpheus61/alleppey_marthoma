@@ -85,7 +85,8 @@ export default async function ApprovalsPage() {
           </div>
 
           <div className="flex gap-2">
-            <form action={approveChangeRequest.bind(null, req.id)} className="flex-1">
+            <form action={approveChangeRequest} className="flex-1">
+              <input type="hidden" name="requestId" value={req.id} />
               <button className={`w-full ${btn} bg-green-600 text-white hover:bg-green-700`}>
                 ✓ Approve
               </button>
