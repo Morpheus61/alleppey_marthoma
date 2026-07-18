@@ -126,23 +126,24 @@ export async function submitChangeRequest(formData: FormData) {
   return { success: true }
 }
 
-export async function approveChangeRequest(formData: FormData) {
+export async function approveChangeRequest(formData: FormData): Promise<void> {
   const { supabase } = await requireSuperAdmin()
   const requestId = formData.get('requestId') as string
-  if (!requestId) return { error: 'Missing request ID' }
+  if (!requestId) return
 
   const { error } = await supabase.rpc('apply_change_request', { p_request_id: requestId })
-  if (error) return { error: error.message }
+  if (error) console.error('[approveChangeRequest]', error.message)
 
   revalidatePath('/admin/approvals')
   revalidatePath('/')
-  return { success: true }
 }
 
-export async function rejectChangeRequest(formData: FormData) {
+export async function rejectChangeRequest(formData: FormData): Promise<void> {
   const { supabase, userId } = await requireSuperAdmin()
   const requestId = formData.get('requestId') as string
   const remarks   = (formData.get('remarks') as string | null)?.trim() || 'Rejected'
+
+  if (!requestId) return
 
   const { error } = await supabase
     .from('change_requests')
@@ -155,7 +156,7 @@ export async function rejectChangeRequest(formData: FormData) {
     .eq('id', requestId)
     .eq('status', 'pending')
 
-  if (error) return { error: error.message }
+  if (error) { console.error('[rejectChangeRequest]', error.message); return }
 
   await supabase.from('audit_log').insert({
     actor_id:     userId,
@@ -166,7 +167,6 @@ export async function rejectChangeRequest(formData: FormData) {
   })
 
   revalidatePath('/admin/approvals')
-  return { success: true }
 }
 
 // ── Registry ──────────────────────────────────────────────────────────────────
