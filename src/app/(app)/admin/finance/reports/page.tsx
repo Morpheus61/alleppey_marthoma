@@ -15,7 +15,7 @@ export default async function ReportsPage() {
   // Overall totals by contribution type
   const { data: byType } = await supabase
     .from('contribution_entries')
-    .select('amount, status, contribution_type_id, contribution_types(name, name_ml, kind)')
+    .select('amount, status, channel, contribution_type_id, contribution_types(name, name_ml, kind)')
     .neq('status', 'rejected')
     .neq('status', 'reversed')
 
