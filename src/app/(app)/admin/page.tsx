@@ -109,8 +109,8 @@ export default async function AdminPage() {
               const fu = fm?.family_units as Record<string, unknown> | null
               const g  = fu?.groups as Record<string, unknown> | null
               return (
-                <div key={c.id as string} className="flex items-center gap-3 bg-white rounded-xl border border-blue-100 px-4 py-3 shadow-sm">
-                  <div className="flex-1 min-w-0">
+                <div key={c.id as string} className="bg-white rounded-xl border border-blue-100 px-4 py-3 shadow-sm space-y-2">
+                  <div className="min-w-0">
                     <p className="font-semibold text-sm">{c.phone as string}</p>
                     <p className="text-xs text-muted-foreground">
                       Claiming: {fm?.full_name as string}
@@ -119,12 +119,14 @@ export default async function AdminPage() {
                       {g?.name_ml ? ` · ${g.name_ml}` : g?.name ? ` · ${g.name}` : ''}
                     </p>
                   </div>
-                  <form action={async () => { 'use server'; await approveClaim(c.id as string) }}>
-                    <button className={`${btn} bg-green-600 text-white hover:bg-green-700`}>Approve</button>
-                  </form>
-                  <form action={async () => { 'use server'; await denyClaim(c.id as string) }}>
-                    <button className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Deny</button>
-                  </form>
+                  <div className="flex gap-2">
+                    <form action={async () => { 'use server'; await approveClaim(c.id as string) }} className="flex-1">
+                      <button className={`w-full ${btn} bg-green-600 text-white hover:bg-green-700`}>Approve</button>
+                    </form>
+                    <form action={async () => { 'use server'; await denyClaim(c.id as string) }} className="flex-1">
+                      <button className={`w-full ${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Deny</button>
+                    </form>
+                  </div>
                 </div>
               )
             })}
@@ -141,18 +143,20 @@ export default async function AdminPage() {
           </h2>
           <div className="space-y-2">
             {pending.map(p => (
-              <div key={p.id} className="flex items-center gap-3 bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm">
-                <div className="flex-1 min-w-0">
+              <div key={p.id} className="bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm space-y-2">
+                <div className="min-w-0">
                   <p className="font-semibold text-sm truncate">{p.full_name}</p>
                   {p.full_name_ml && <p className="text-xs text-muted-foreground font-malayalam" lang="ml">{p.full_name_ml}</p>}
                   <p className="text-xs text-muted-foreground">{p.phone}{p.house_name ? ` · ${p.house_name}` : ''}</p>
                 </div>
-                <form action={approveProfile.bind(null, p.id)}>
-                  <button className={`${btn} bg-green-600 text-white hover:bg-green-700`}>Approve</button>
-                </form>
-                <form action={declineProfile.bind(null, p.id)}>
-                  <button className={`${btn} bg-red-100 text-red-700 hover:bg-red-200`}>Decline</button>
-                </form>
+                <div className="flex gap-2">
+                  <form action={approveProfile.bind(null, p.id)} className="flex-1">
+                    <button className={`w-full ${btn} bg-green-600 text-white hover:bg-green-700`}>Approve</button>
+                  </form>
+                  <form action={declineProfile.bind(null, p.id)} className="flex-1">
+                    <button className={`w-full ${btn} bg-red-100 text-red-700 hover:bg-red-200`}>Decline</button>
+                  </form>
+                </div>
               </div>
             ))}
           </div>

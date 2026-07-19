@@ -201,7 +201,7 @@ function EventSheet({
 
   return (
     // Overlay
-    <div className="fixed inset-0 z-50 flex items-end lg:items-stretch lg:justify-end" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="fixed inset-0 z-[60] flex items-end lg:items-stretch lg:justify-end" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-black/40 absolute inset-0" onClick={onClose} />
       {/* Sheet */}
       <div className="relative bg-white w-full lg:w-[420px] max-h-[90vh] lg:max-h-full overflow-y-auto rounded-t-2xl lg:rounded-none shadow-2xl z-10 flex flex-col">
@@ -379,6 +379,7 @@ function EventSheet({
             className="w-full rounded-xl bg-brand-900 text-white text-sm font-semibold py-3 hover:bg-brand-800 disabled:opacity-50 transition-colors">
             {saving ? 'Adding…' : 'Add to Calendar'}
           </button>
+          <div className="safe-area-pb" />
         </form>
       </div>
     </div>
@@ -448,7 +449,7 @@ function EditEventSheet({ ev, onClose }: { ev: CalEvent; onClose: () => void }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end lg:items-stretch lg:justify-end" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="fixed inset-0 z-[60] flex items-end lg:items-stretch lg:justify-end" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-black/40 absolute inset-0" onClick={onClose} />
       <div className="relative bg-white w-full lg:w-[420px] max-h-[90vh] lg:max-h-full overflow-y-auto rounded-t-2xl lg:rounded-none shadow-2xl z-10 flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
@@ -536,6 +537,7 @@ function EditEventSheet({ ev, onClose }: { ev: CalEvent; onClose: () => void }) 
             className="w-full rounded-xl bg-brand-900 text-white text-sm font-semibold py-3 hover:bg-brand-800 disabled:opacity-50 transition-colors">
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
+          <div className="safe-area-pb" />
         </form>
       </div>
     </div>
@@ -588,9 +590,9 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="fixed inset-0 z-[60] flex items-end" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-black/40 absolute inset-0" onClick={onClose} />
-      <div className="relative bg-white w-full max-h-[70vh] overflow-y-auto rounded-t-2xl shadow-2xl z-10">
+      <div className="relative bg-white w-full max-h-[80vh] overflow-y-auto rounded-t-2xl shadow-2xl z-10">
         <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
           <p className="text-sm font-bold text-brand-900">{dispDate}</p>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1"><X size={18} /></button>
@@ -598,7 +600,7 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
         <div className="divide-y">
           {evs.map(ev => (
             <div key={ev.id} className={`px-5 py-3 flex items-start justify-between gap-3 ${ev.is_festival ? 'bg-amber-50' : ''}`}>
-              <div className="flex gap-3 min-w-0">
+              <div className="flex gap-3 min-w-0 flex-1">
                 <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${eventColor(ev)}`} />
                 <div className="min-w-0">
                   <p className="font-semibold text-sm">{ev.title}</p>
@@ -608,23 +610,24 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
                     {ev.venue ? ` · ${ev.venue}` : ''}
                     {ev.groups ? ` · ${ev.groups.name_ml ?? ev.groups.name}` : ''}
                   </p>
+                  {isAdmin && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <button onClick={() => setEditingEvent(ev)}
+                        className="text-xs text-brand-700 hover:text-brand-900 font-semibold flex items-center gap-1 border border-brand-200 rounded-lg px-2.5 py-1 bg-brand-50 hover:bg-brand-100 min-h-[36px]">
+                        <Pencil size={12} /> Edit
+                      </button>
+                      <button onClick={() => handleDelete(ev.id)} disabled={deleting === ev.id}
+                        className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 border border-red-200 rounded-lg px-2.5 py-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 min-h-[36px]">
+                        {deleting === ev.id ? '…' : 'Delete'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-              {isAdmin && (
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setEditingEvent(ev)}
-                    className="text-[10px] text-brand-700 hover:text-brand-900 flex items-center gap-0.5">
-                    <Pencil size={11} /> Edit
-                  </button>
-                  <button onClick={() => handleDelete(ev.id)} disabled={deleting === ev.id}
-                    className="text-[10px] text-red-400 hover:text-red-600 disabled:opacity-50">
-                    {deleting === ev.id ? '…' : 'Delete'}
-                  </button>
-                </div>
-              )}
             </div>
           ))}
         </div>
+        <div className="safe-area-pb" />
       </div>
     </div>
   )
