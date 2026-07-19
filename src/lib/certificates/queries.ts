@@ -22,7 +22,7 @@ export async function searchMembers(query: string): Promise<MemberRecord[]> {
     .order('full_name')
     .limit(10)
   if (error) throw error
-  return (data ?? []) as MemberRecord[]
+  return (data ?? []) as unknown as MemberRecord[]
 }
 
 /** Fetch a single member by ID */
@@ -34,7 +34,7 @@ export async function getMemberById(id: string): Promise<MemberRecord | null> {
     .eq('id', id)
     .single()
   if (error) return null
-  return data as MemberRecord
+  return data as unknown as MemberRecord
 }
 
 /** Generate the next certificate number for a given type */
@@ -69,7 +69,7 @@ export async function createCertificateRequest(payload: {
     .select()
     .single()
   if (error) throw error
-  return data as CertificateRequest
+  return data as unknown as CertificateRequest
 }
 
 /** All pending requests with joined member + creator data */
