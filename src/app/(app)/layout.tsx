@@ -22,7 +22,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (profile.status === 'pending') redirect('/auth/pending')
   if (profile.status !== 'active') redirect('/auth/disabled')
 
-  const isAdmin = profile.is_admin ?? false
+  // Also check parish_roles — a super_admin role grants admin access even if is_admin=false
+  const { data: roleRow } = await supabase
+    .from('parish_roles')
+    .select('id')
+    .eq('profile_id', user.id)
+    .in('role', ['admin', 'super_admin'])
+    .is('revoked_at', null)
+    .maybeSingle()
+
+  const isAdmin = !!(profile.is_admin || roleRow)
 
   return (
     <div className="min-h-screen bg-[#f9f0e3]">

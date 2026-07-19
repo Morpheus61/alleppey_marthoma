@@ -9,12 +9,12 @@ export default async function CalendarPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // Fetch 5-month window (prev + current + 3 future)
+  // Fetch 7-month window (1 prev + current + 6 ahead) — covers half a year of future events
   const windowStart = new Date()
   windowStart.setMonth(windowStart.getMonth() - 1)
   windowStart.setDate(1)
   const windowEnd = new Date()
-  windowEnd.setMonth(windowEnd.getMonth() + 4)
+  windowEnd.setMonth(windowEnd.getMonth() + 6)
   windowEnd.setDate(0)
 
   const { data: events } = await supabase

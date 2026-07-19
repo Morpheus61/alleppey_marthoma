@@ -570,11 +570,13 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
   isAdmin: boolean; currentUserId: string
 }) {
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [editingEvent, setEditingEvent] = useState<CalEvent | null>(null)
   const dispDate = new Date(day + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
 
   async function handleDelete(id: string) {
     setDeleting(id)
+    setConfirmDelete(null)
     await deleteEvent(id)
     setDeleting(null)
     onClose()
@@ -616,10 +618,24 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
                         className="text-xs text-brand-700 hover:text-brand-900 font-semibold flex items-center gap-1 border border-brand-200 rounded-lg px-2.5 py-1 bg-brand-50 hover:bg-brand-100 min-h-[36px]">
                         <Pencil size={12} /> Edit
                       </button>
-                      <button onClick={() => handleDelete(ev.id)} disabled={deleting === ev.id}
-                        className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 border border-red-200 rounded-lg px-2.5 py-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 min-h-[36px]">
-                        {deleting === ev.id ? '…' : 'Delete'}
-                      </button>
+                      {confirmDelete === ev.id ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-xs text-red-600 font-semibold">Delete?</span>
+                          <button onClick={() => handleDelete(ev.id)} disabled={deleting === ev.id}
+                            className="text-xs text-white bg-red-600 hover:bg-red-700 font-semibold rounded-lg px-2.5 py-1 min-h-[36px] disabled:opacity-50">
+                            {deleting === ev.id ? '…' : 'Yes'}
+                          </button>
+                          <button onClick={() => setConfirmDelete(null)}
+                            className="text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 font-semibold rounded-lg px-2.5 py-1 min-h-[36px]">
+                            No
+                          </button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmDelete(ev.id)}
+                          className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 border border-red-200 rounded-lg px-2.5 py-1 bg-red-50 hover:bg-red-100 min-h-[36px]">
+                          Delete
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
