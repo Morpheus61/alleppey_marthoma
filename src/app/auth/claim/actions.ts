@@ -21,23 +21,14 @@ export async function claimFamilyMember(
   if (!profile) return { error: 'Profile not found' }
   if (profile.claim_status !== 'unclaimed') return { error: 'Claim already submitted' }
 
-  // Check the registry member isn't already claimed
-  const { data: existing } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('family_member_id', familyMemberId)
-    .maybeSingle()
+  // Fetch the registry member via security-definer RPC — bypasses RLS for
+  // pending/unclaimed users who have no linked family_member row yet.
+  // The function also verifies the member is unclaimed (no profile linked).
+  const { data: claimableRows } = await supabase
+    .rpc('get_family_member_for_claim', { p_id: familyMemberId })
 
-  if (existing) return { error: 'This person is already linked to another account' }
-
-  // Auto-approve if registry member's phone matches this account's phone
-  const { data: registryMember } = await supabase
-    .from('family_members')
-    .select('id, full_name, phone')
-    .eq('id', familyMemberId)
-    .single()
-
-  if (!registryMember) return { error: 'Registry person not found' }
+  const registryMember = (claimableRows as { id: string; full_name: string; phone: string | null }[] | null)?.[0] ?? null
+  if (!registryMember) return { error: 'Registry person not found or already claimed' }
 
   const profilePhone = (profile.phone ?? '').replace(/\D/g, '').slice(-10)
   const registryPhone = (registryMember.phone ?? '').replace(/\D/g, '').slice(-10)
