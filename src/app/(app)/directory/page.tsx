@@ -1,68 +1,41 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
-import { Search, Pencil, MessageCircle, UserCheck } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import type { Profile } from '@/types/database'
 import ImportPanel from './ImportPanel'
 import AddMemberForm from '@/components/directory/AddMemberForm'
-import { disableMember, reactivateMember } from './actions'
 import DisableMemberButton from '@/components/directory/DisableMemberButton'
+import { reactivateMember } from './actions'
+import FamilyDirectory, { type FamilyEntry } from './FamilyDirectory'
 
 export const metadata = { title: 'Church Directory' }
 
-interface Props {
-  searchParams: Promise<{ q?: string }>
-}
-
-export default async function DirectoryPage({ searchParams }: Props) {
-  const { q: qRaw } = await searchParams
+export default async function DirectoryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
   const { data: me } = await supabase.from('profiles').select('is_admin, status').eq('id', user.id).single()
+  const { data: roleRow } = await supabase.from('parish_roles')
+    .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
   const myProfile = me as Pick<Profile, 'is_admin' | 'status'> | null
   if (!myProfile || myProfile.status !== 'active') redirect('/')
+  const isAdmin = !!(myProfile.is_admin || roleRow)
 
-  const q = qRaw?.trim() ?? ''
+  // Family-based directory via security-definer RPC (bypasses family_members RLS)
+  const { data: familiesRaw } = await supabase.rpc('get_family_directory')
+  const families = (familiesRaw ?? []) as FamilyEntry[]
 
-  // Non-admins see only the columns needed for the directory card.
-  // DOB, email, full address are omitted from the listing for privacy.
-  const baseSelect = 'id, full_name, full_name_ml, phone, house_name, avatar_url, family_photo_url, is_admin, whatsapp_number, is_mobile_whatsapp, status'
-  const adminSelect = `${baseSelect}, date_of_birth, address, email`
-
-  let query = supabase
-    .from('profiles')
-    .select(myProfile.is_admin ? adminSelect : baseSelect)
-    .in('status', myProfile.is_admin ? ['active', 'disabled'] : ['active'])
-    .order('full_name')
-
-  if (q) {
-    query = query.or(`full_name.ilike.%${q}%,full_name_ml.ilike.%${q}%,house_name.ilike.%${q}%,address.ilike.%${q}%`)
-  }
-
-  const { data } = await query.limit(300)
-  const members = (data as Partial<Profile>[] | null) ?? []
-  const activeMembers   = members.filter(m => m.status === 'active')
-  const disabledMembers = myProfile.is_admin ? members.filter(m => m.status === 'disabled') : []
-
-  const grouped = activeMembers.reduce<Record<string, typeof activeMembers>>((acc, m) => {
-    const letter = (m.full_name ?? '#')[0]?.toUpperCase() ?? '#'
-    ;(acc[letter] ??= []).push(m)
-    return acc
-  }, {})
-
-  const waNumber = (m: Partial<Profile>) =>
-    m.is_mobile_whatsapp ? m.phone : (m.whatsapp_number ?? null)
-
-  /** Build a wa.me URL from any phone format stored in DB.
-   *  Strips leading + or double-91 prefix, always produces +91XXXXXXXXXX */
-  const waUrl = (raw: string): string => {
-    const digits = raw.replace(/\D/g, '')         // strip non-digits
-    // normalise: 12-digit 91XXXXXXXXXX → keep; 10-digit → prepend 91
-    const e164 = digits.startsWith('91') && digits.length === 12 ? digits : `91${digits.slice(-10)}`
-    return `https://wa.me/${e164}`
+  // Admin: disabled accounts list for management
+  let disabledMembers: Partial<Profile>[] = []
+  if (isAdmin) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, full_name_ml, phone, house_name')
+      .eq('status', 'disabled')
+      .order('full_name')
+    disabledMembers = (data ?? []) as Partial<Profile>[]
   }
 
   return (
@@ -70,103 +43,27 @@ export default async function DirectoryPage({ searchParams }: Props) {
 
       <div>
         <h1 className="text-2xl font-bold text-brand-900">Church Directory</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{activeMembers.length} active members{disabledMembers.length > 0 ? ` · ${disabledMembers.length} disabled` : ''}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {families.length} {families.length === 1 ? 'family' : 'families'} · tap a card to see details
+        </p>
       </div>
 
-      {myProfile.is_admin && (
+      {/* Admin tools */}
+      {isAdmin && (
         <div className="grid sm:grid-cols-2 gap-4">
           <AddMemberForm />
           <ImportPanel />
         </div>
       )}
 
-      {/* Search */}
-      <form method="GET">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input name="q" defaultValue={q}
-            placeholder="Search by name, family or address…"
-            className="w-full rounded-xl border border-amber-100 bg-white pl-9 pr-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-900" />
-        </div>
-      </form>
+      {/* Family-based directory — client component handles search + expand */}
+      <FamilyDirectory families={families} isAdmin={isAdmin} />
 
-      {/* Member list grouped alphabetically */}
-      {Object.keys(grouped).sort().map(letter => (
-        <section key={letter}>
-          <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2 px-1">{letter}</p>
-          <div className="space-y-2">
-            {grouped[letter].map(m => {
-              const wa = waNumber(m)
-              return (
-                <div key={m.id} className="bg-white rounded-xl border border-amber-50 shadow-sm overflow-hidden">
-                  {/* Family photo — full-width banner if available */}
-                  {m.family_photo_url && (
-                    <div className="relative w-full h-32 bg-brand-50">
-                      <Image
-                        src={m.family_photo_url}
-                        alt={`${m.full_name} family`}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    {/* Profile pic (avatar) — small circle */}
-                    <div className="shrink-0 w-11 h-11 rounded-full overflow-hidden bg-brand-100 border-2 border-white shadow-sm flex items-center justify-center">
-                      {m.avatar_url ? (
-                        <Image src={m.avatar_url} alt={m.full_name ?? ''} width={44} height={44} className="object-cover w-full h-full" unoptimized />
-                      ) : (
-                        <span className="text-brand-900 font-bold text-base">{(m.full_name ?? '?')[0].toUpperCase()}</span>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">
-                        {m.full_name}
-                        {m.is_admin && <span className="ml-2 text-[10px] bg-brand-900 text-white px-1.5 py-0.5 rounded-full font-bold">Admin</span>}
-                      </p>
-                      {m.full_name_ml && <p className="text-xs text-muted-foreground font-malayalam truncate" lang="ml">{m.full_name_ml}</p>}
-                      {m.house_name && <p className="text-xs text-muted-foreground truncate">{m.house_name}</p>}
-                      {myProfile.is_admin && m.address && <p className="text-[11px] text-muted-foreground truncate">{m.address}</p>}
-                    </div>
-
-                    {/* Admin actions */}
-                    {myProfile.is_admin && (
-                      <div className="flex items-center gap-2 shrink-0">
-                        {wa && (
-                          <a href={waUrl(wa)} target="_blank" rel="noopener noreferrer"
-                            className="text-green-600 hover:text-green-700" title={`WhatsApp ${wa}`}>
-                            <MessageCircle size={18} />
-                          </a>
-                        )}
-                        <Link href={`/directory/${m.id}`} className="text-amber-600 hover:text-amber-800" title="Edit member">
-                          <Pencil size={16} />
-                        </Link>
-                        <DisableMemberButton memberId={m.id!} memberName={m.full_name ?? 'this member'} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      ))}
-
-      {activeMembers.length === 0 && (
-        <p className="text-center text-muted-foreground py-12 text-sm">
-          {q ? `No members found for "${q}"` : 'No members in the directory yet.'}
-        </p>
-      )}
-
-      {/* ── Disabled members (admin only) ── */}
-      {myProfile.is_admin && disabledMembers.length > 0 && (
+      {/* Disabled accounts — admin only */}
+      {isAdmin && disabledMembers.length > 0 && (
         <details className="mt-4">
           <summary className="text-xs font-semibold text-red-500 cursor-pointer select-none py-1">
-            {disabledMembers.length} disabled member{disabledMembers.length > 1 ? 's' : ''}
+            {disabledMembers.length} disabled account{disabledMembers.length > 1 ? 's' : ''}
           </summary>
           <div className="space-y-2 mt-2">
             {disabledMembers.map(m => (
@@ -184,8 +81,8 @@ export default async function DirectoryPage({ searchParams }: Props) {
                     <Pencil size={15} />
                   </Link>
                   <form action={reactivateMember.bind(null, m.id!)}>
-                    <button type="submit" className="text-green-600 hover:text-green-800" title="Re-activate member">
-                      <UserCheck size={16} />
+                    <button type="submit" className="text-[11px] text-green-600 hover:text-green-800 font-semibold border border-green-200 rounded-lg px-2 py-1">
+                      Reactivate
                     </button>
                   </form>
                 </div>
