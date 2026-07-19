@@ -78,6 +78,7 @@ export default function NewCertificatePage() {
   const [error,     setError]     = useState('')
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [vicarNameSetting, setVicarNameSetting] = useState<string>('')
 
   useEffect(() => {
     const init = async () => {
@@ -85,6 +86,16 @@ export default function NewCertificatePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.replace('/auth/login'); return }
       setCurrentUserId(session.user.id)
+      // Fetch the current Vicar name from parish_roles (super_admin, not revoked)
+      const { data: roleRow } = await supabase
+        .from('parish_roles')
+        .select('profiles!profile_id(full_name)')
+        .eq('role', 'super_admin')
+        .is('revoked_at', null)
+        .maybeSingle()
+      const vicar = (roleRow as unknown as { profiles: { full_name: string } | null } | null)
+        ?.profiles?.full_name ?? ''
+      setVicarNameSetting(vicar)
     }
     init()
   }, [router])
@@ -103,7 +114,8 @@ export default function NewCertificatePage() {
 
   const handleTypeSelect = (t: CertType) => {
     setCertType(t)
-    setExtras({})
+    // Reset extras for the new type; pre-fill vicar from app_settings if set
+    setExtras(vicarNameSetting ? { vicar: vicarNameSetting } : {})
     setStep(3)
   }
 

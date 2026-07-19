@@ -10,6 +10,22 @@ const MEMBER_SELECT = `
   family_members, display_name, avatar_url, is_admin, claim_status
 `.trim()
 
+/**
+ * Returns the full name of the current Vicar (super_admin parish role).
+ * Used to pre-populate the Vicar field on all certificate types.
+ */
+export async function getVicarName(): Promise<string> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('parish_roles')
+    .select('profiles!profile_id(full_name)')
+    .eq('role', 'super_admin')
+    .is('revoked_at', null)
+    .maybeSingle()
+  return (data as unknown as { profiles: { full_name: string } | null } | null)
+    ?.profiles?.full_name ?? ''
+}
+
 /** Live search of active members — does NOT filter by claim_status */
 export async function searchMembers(query: string): Promise<MemberRecord[]> {
   if (!query.trim()) return []

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
-  getPendingRequests, approveRequest, rejectRequest, uploadSignature,
+  getPendingRequests, approveRequest, rejectRequest, uploadSignature, getVicarName,
 } from '@/lib/certificates/queries'
 import { generateCertificatePDF } from '@/components/certificates/PDFGenerator'
 import SignatureCapture from '@/components/certificates/SignatureCapture'
@@ -37,6 +37,9 @@ export default function ApprovalQueuePage() {
         .from('profiles').select('id, full_name, is_admin').eq('id', session.user.id).single()
       if (!profile?.is_admin) { router.replace('/certificates'); return }
       setCurrentUser(profile)
+      // Use the actual Vicar name from parish_roles for PDF generation
+      const vicar = await getVicarName()
+      if (vicar) setCurrentUser({ ...profile, full_name: vicar })
       setRequests(await getPendingRequests())
       setLoading(false)
     }
