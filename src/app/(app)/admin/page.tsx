@@ -33,6 +33,7 @@ export default async function AdminPage() {
     { data: claimsRaw },
     { data: membersRaw },
     { data: groupsRaw },
+    { data: headMembersRaw },
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -45,12 +46,14 @@ export default async function AdminPage() {
       .order('created_at'),
     supabase.from('profiles').select('id,display_name,full_name,phone,house_name,is_admin,status').in('status', ['active','disabled']).order('display_name,full_name'),
     supabase.from('groups').select('id,name,name_ml,slug,group_type,is_archived').order('name'),
+    supabase.from('family_members').select('profile_id').eq('relation_to_head', 'head').not('profile_id', 'is', null),
   ])
 
   const pending      = (pendingRaw  as Profile[] | null) ?? []
   const claims       = (claimsRaw   as unknown[]) ?? []
   const members  = (membersRaw  as Pick<Profile,'id'|'display_name'|'full_name'|'phone'|'house_name'|'is_admin'|'status'>[] | null) ?? []
   const groups       = (groupsRaw   as Pick<Group,'id'|'name'|'name_ml'|'slug'|'group_type'|'is_archived'>[] | null) ?? []
+  const headIds      = new Set(((headMembersRaw as { profile_id: string }[] | null) ?? []).map(m => m.profile_id))
   const activeGroups   = groups.filter(g => !g.is_archived)
   const archivedGroups = groups.filter(g => g.is_archived)
 
@@ -231,9 +234,13 @@ export default async function AdminPage() {
                 <p className="font-semibold text-sm truncate">
                   {m.full_name}
                   {m.is_admin && <span className={`${badge} bg-brand-900 text-white ml-2`}>Admin</span>}
+                  {headIds.has(m.id) && <span className={`${badge} bg-amber-100 text-amber-800 border border-amber-200 ml-2`}>Head of Family</span>}
                   {m.status === 'disabled' && <span className={`${badge} bg-gray-200 text-gray-500 ml-2`}>Disabled</span>}
                 </p>
-                <p className="text-xs text-muted-foreground">{m.phone}{m.house_name ? ` · ${m.house_name}` : ''}</p>
+                <p className="text-xs text-muted-foreground">{m.phone}</p>
+                {m.house_name && (
+                  <span className="inline-block mt-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{m.house_name}</span>
+                )}
               </div>
               {m.id !== user.id && (
                 <form action={toggleAdmin.bind(null, m.id, !m.is_admin)}>

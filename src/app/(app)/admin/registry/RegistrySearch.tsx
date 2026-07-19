@@ -17,6 +17,7 @@ interface Household {
   id: string; house_name: string; house_name_ml: string | null
   address: string | null; prayer_group_id: string
   groups: { name: string; name_ml: string | null } | null; memberCount: number
+  head_name: string | null; head_name_ml: string | null; member_names: string[]
 }
 interface Group { id: string; name: string; name_ml: string | null }
 interface UnlinkedProfile { id: string; full_name: string; full_name_ml: string | null; phone: string; house_name: string | null; address: string | null }
@@ -49,13 +50,16 @@ export default function RegistrySearch({
 
   const filtered = query.trim().length < 1
     ? households
-    : households.filter(h =>
-        h.house_name.toLowerCase().includes(query.toLowerCase()) ||
-        (h.house_name_ml ?? '').includes(query) ||
-        (h.address ?? '').toLowerCase().includes(query.toLowerCase()) ||
-        (h.groups?.name ?? '').toLowerCase().includes(query.toLowerCase()) ||
-        (h.groups?.name_ml ?? '').includes(query)
-      )
+    : households.filter(h => {
+        const q = query.toLowerCase()
+        return h.house_name.toLowerCase().includes(q) ||
+          (h.house_name_ml ?? '').includes(query) ||
+          (h.address ?? '').toLowerCase().includes(q) ||
+          (h.groups?.name ?? '').toLowerCase().includes(q) ||
+          (h.groups?.name_ml ?? '').includes(query) ||
+          (h.head_name ?? '').toLowerCase().includes(q) ||
+          h.member_names.some(n => n.toLowerCase().includes(q))
+      })
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setSaving(true); setError(null)
@@ -166,7 +170,7 @@ export default function RegistrySearch({
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input value={query} onChange={e => { setQuery(e.target.value); setShowCreate(false) }}
-          placeholder="Search by house name, Bhagam, or address…"
+          placeholder="Search by house name, member name, or Bhagam…"
           className="w-full rounded-xl border border-amber-100 bg-white pl-9 pr-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-900" />
       </div>
 
@@ -178,6 +182,12 @@ export default function RegistrySearch({
               <Link href={`/admin/registry/${h.id}`} className="block px-4 py-3 pr-10">
                 <p className="font-semibold text-sm">{h.house_name}</p>
                 {h.house_name_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{h.house_name_ml}</p>}
+                {h.head_name && (
+                  <p className="text-xs font-medium text-brand-900 mt-0.5">
+                    {h.head_name}
+                    {h.head_name_ml && <span className="font-malayalam text-muted-foreground font-normal ml-1.5" lang="ml">{h.head_name_ml}</span>}
+                  </p>
+                )}
                 {h.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{h.address}</p>}
                 <div className="flex items-center gap-2 mt-2">
                   {h.groups && <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{h.groups.name_ml ?? h.groups.name}</span>}

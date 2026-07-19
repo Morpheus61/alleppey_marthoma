@@ -19,14 +19,21 @@ export default async function RegistryPage() {
     .select('id, house_name, house_name_ml, address, prayer_group_id, groups!prayer_group_id(name, name_ml)')
     .order('house_name')
 
-  const { data: memberCounts } = await supabase
+  const { data: memberData } = await supabase
     .from('family_members')
-    .select('family_id')
+    .select('family_id, full_name, full_name_ml, relation_to_head')
 
-  const countByFamily = (memberCounts ?? []).reduce<Record<string, number>>((acc, row) => {
-    acc[row.family_id] = (acc[row.family_id] ?? 0) + 1
-    return acc
-  }, {})
+  const countByFamily: Record<string, number> = {}
+  const headByFamily: Record<string, { full_name: string; full_name_ml: string | null }> = {}
+  const membersByFamily: Record<string, string[]> = {}
+  for (const m of (memberData ?? [])) {
+    countByFamily[m.family_id] = (countByFamily[m.family_id] ?? 0) + 1
+    if (!membersByFamily[m.family_id]) membersByFamily[m.family_id] = []
+    membersByFamily[m.family_id].push(m.full_name)
+    if (m.relation_to_head === 'head') {
+      headByFamily[m.family_id] = { full_name: m.full_name, full_name_ml: m.full_name_ml ?? null }
+    }
+  }
 
   const { data: groups } = await supabase
     .from('groups')
@@ -47,6 +54,9 @@ export default async function RegistryPage() {
     prayer_group_id: f.prayer_group_id,
     groups: (f.groups as unknown as { name: string; name_ml: string | null } | null),
     memberCount: countByFamily[f.id] ?? 0,
+    head_name: headByFamily[f.id]?.full_name ?? null,
+    head_name_ml: headByFamily[f.id]?.full_name_ml ?? null,
+    member_names: membersByFamily[f.id] ?? [],
   }))
 
   // Unlinked profiles = registered accounts not yet attached to any family_member
