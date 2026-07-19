@@ -86,7 +86,7 @@ export default async function HomePage() {
                 {a.title && <p className="font-semibold text-sm text-brand-900">{a.title}</p>}
                 <p className="text-sm text-gray-700 mt-0.5 line-clamp-3">{a.body}</p>
                 <p className="text-[10px] text-muted-foreground mt-2">
-                  {a.created_at ? format(new Date(a.created_at), 'd MMM yyyy') : ''}
+                  {a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }) : ''}
                 </p>
               </div>
             ))}
