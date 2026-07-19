@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { normalizePhone } from '@/lib/phone'
@@ -18,10 +18,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  // Auto-redirect if a valid session already exists on this device
+  const supabase = createClient()
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace('/')
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault()
