@@ -36,16 +36,13 @@ export async function claimFamilyMember(
     && registryPhone.length === 10
     && profilePhone === registryPhone
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      family_member_id: familyMemberId,
-      display_name:     registryMember.full_name,
-      claim_status:     autoApprove ? 'approved' : 'pending_claim',
-      status:           autoApprove ? 'active'   : 'pending',
-    })
-    .eq('id', user.id)
-    .eq('claim_status', 'unclaimed')   // guard against race condition
+  // Use a security-definer RPC to perform the profile update — the direct
+  // UPDATE is blocked by the "profiles: update own" RLS WITH CHECK clause
+  // which prevents changing the status column (needed for auto-approve).
+  const { error } = await supabase.rpc('complete_claim', {
+    p_family_member_id: familyMemberId,
+    p_auto_approve:     autoApprove,
+  })
 
   if (error) return { error: error.message }
 
