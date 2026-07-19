@@ -91,7 +91,8 @@ function drawTitle(doc: jsPDFType, certType: CertType, W: number, y: number): nu
   return y
 }
 
-function drawSeal(doc: jsPDFType, W: number, H: number): void {
+/** Text-based seal fallback used when church-seal.png is not available */
+function drawTextSeal(doc: jsPDFType, W: number, H: number): void {
   const cx = W - 52, cy = H - 70
   doc.setDrawColor(...CHURCH.gold)
   doc.setLineWidth(0.6)
@@ -101,11 +102,55 @@ function drawSeal(doc: jsPDFType, W: number, H: number): void {
   doc.setFontSize(6)
   doc.setTextColor(...CHURCH.gold)
   doc.setFont('helvetica', 'bold')
-  doc.text('ST. GEORGE',   cx, cy - 7, { align: 'center' })
-  doc.text('MARTHOMA',     cx, cy - 2, { align: 'center' })
-  doc.text('SYRIAN CHURCH',cx, cy + 3, { align: 'center' })
+  doc.text('ST. GEORGE',    cx, cy - 7, { align: 'center' })
+  doc.text('MARTHOMA',      cx, cy - 2, { align: 'center' })
+  doc.text('SYRIAN CHURCH', cx, cy + 3, { align: 'center' })
   doc.setFont('helvetica', 'normal')
-  doc.text('ALAPPUZHA',    cx, cy + 9, { align: 'center' })
+  doc.text('ALAPPUZHA',     cx, cy + 9, { align: 'center' })
+}
+
+/**
+ * Draws the church seal as a centered watermark.
+ * Loads /church-seal.png and renders it at 15% opacity via canvas.
+ * Falls back to the text-based seal if the image is unavailable.
+ */
+async function drawSeal(doc: jsPDFType, W: number, H: number): Promise<void> {
+  try {
+    const response = await fetch('/church-seal.png')
+    if (!response.ok) { drawTextSeal(doc, W, H); return }
+
+    const blob = await response.blob()
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload  = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+
+    // Render at 15% opacity for watermark effect using an off-screen canvas
+    const px = 400
+    const canvas = document.createElement('canvas')
+    canvas.width = px; canvas.height = px
+    const ctx = canvas.getContext('2d')!
+    const img = new Image()
+    img.src = base64
+    await new Promise<void>((resolve, reject) => {
+      img.onload  = () => resolve()
+      img.onerror = () => reject(new Error('Image load failed'))
+    })
+    ctx.globalAlpha = 0.15
+    ctx.drawImage(img, 0, 0, px, px)
+    const watermarked = canvas.toDataURL('image/png')
+
+    // Centre on the page — 90 × 90 mm
+    const size = 90
+    const x = (W - size) / 2
+    const y = (H - size) / 2
+    doc.addImage(watermarked, 'PNG', x, y, size, size)
+  } catch {
+    // Image unavailable — fall back to vector text seal
+    drawTextSeal(doc, W, H)
+  }
 }
 
 function drawSignatures(
@@ -263,7 +308,7 @@ export async function generateCertificatePDF(params: {
     doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40)
   }
 
-  drawSeal(doc, W, H)
+  await drawSeal(doc, W, H)
   drawSignatures(doc, W, H, mar, vicarName, secretaryName, secretarySigUrl, vicarSigUrl)
 
   // Footer
