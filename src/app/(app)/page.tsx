@@ -17,11 +17,14 @@ export default async function HomePage() {
   if (!p || p.status === 'pending') redirect('/auth/pending')
   if (p.status !== 'active') redirect('/auth/disabled')
 
-  // Fetch upcoming events (next 5)
+  // Fetch upcoming events (next 5) — use start-of-today so events that
+  // started earlier today still appear (avoids the IST vs UTC mismatch
+  // where a morning event looks "past" by afternoon UTC time).
+  const todayStr = new Date().toISOString().slice(0, 10)  // 'YYYY-MM-DD'
   const { data: events, error: eventsErr } = await supabase
     .from('events')
     .select('id, title, starts_at, venue, visibility')
-    .gte('starts_at', new Date().toISOString())
+    .gte('starts_at', todayStr)
     .order('starts_at')
     .limit(5)
   if (eventsErr) console.error('[HomePage] events error:', eventsErr.message, eventsErr.code)
