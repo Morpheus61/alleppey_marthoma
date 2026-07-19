@@ -189,6 +189,16 @@ export async function rejectRequest(
   if (error) throw error
 }
 
+/** Admin: delete a certificate request by ID */
+export async function deleteCertificateRequest(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('certificate_requests')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}
+
 /** Upload a signature image to the 'signatures' storage bucket */
 export async function uploadSignature(dataUrl: string, fileName: string): Promise<string> {
   const supabase = createClient()

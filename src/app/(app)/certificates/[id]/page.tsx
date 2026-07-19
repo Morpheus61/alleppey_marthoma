@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { getCertificateRequest } from '@/lib/certificates/queries'
+import { getCertificateRequest, deleteCertificateRequest } from '@/lib/certificates/queries'
 import { generateCertificatePDF } from '@/components/certificates/PDFGenerator'
 import type { CertificateRequest } from '@/lib/certificates/types'
 import { IST_TZ } from '@/lib/dates'
@@ -29,6 +29,7 @@ export default function CertificateDetailPage() {
   const [vicarName, setVicarName] = useState('')
   const [secretaryName, setSecretaryName] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [deleting, setDeleting]       = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -49,8 +50,21 @@ export default function CertificateDetailPage() {
     init()
   }, [id, router])
 
-  const handleDownload = async () => {
-    if (!req?.member) return
+  const handleDelete = async () => {
+    if (!confirm('Delete this certificate request? This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      await deleteCertificateRequest(id)
+      router.replace('/certificates')
+    } catch (e) {
+      console.error('Delete failed', e)
+      alert('Failed to delete. Ensure migration 026 has been applied.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleDownload = async () => {    if (!req?.member) return
     setDownloading(true)
     try {
       await generateCertificatePDF({
@@ -95,6 +109,15 @@ export default function CertificateDetailPage() {
               className="text-xs font-semibold bg-brand-900 text-white rounded-xl px-3 py-2 hover:bg-brand-800 disabled:opacity-50 transition-colors"
             >
               {downloading ? 'Generating…' : '⬇ Download PDF'}
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-xs font-semibold bg-red-700 text-white rounded-xl px-3 py-2 hover:bg-red-800 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
             </button>
           )}
         </div>

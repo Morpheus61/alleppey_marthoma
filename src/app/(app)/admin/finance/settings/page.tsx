@@ -69,6 +69,15 @@ export default async function FinanceSettingsPage() {
           </div>
         </section>
 
+        <section className="bg-white rounded-xl border border-amber-100 p-4 space-y-3">
+          <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">Certificate Settings</p>
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Vicar Name (auto-fills certificate forms)</label>
+            <input name="vicar_name" defaultValue={s('vicar_name')} placeholder="Rev. Full Name" className={inp} />
+            <p className="text-[11px] text-muted-foreground mt-1">Update whenever the vicar changes</p>
+          </div>
+        </section>
+
         <button type="submit"
           className="w-full rounded-xl bg-brand-900 text-white text-sm font-semibold py-3 hover:bg-brand-800 transition-colors">
           Save Settings
