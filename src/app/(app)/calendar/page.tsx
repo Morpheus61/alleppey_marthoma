@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CalendarClient from './CalendarClient'
+import { todayIST, startOfMonthIST, endOfMonthIST } from '@/lib/dates'
 
 export const metadata = { title: 'Calendar' }
 
@@ -9,13 +10,9 @@ export default async function CalendarPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // Fetch 7-month window (1 prev + current + 6 ahead) — covers half a year of future events
-  const windowStart = new Date()
-  windowStart.setMonth(windowStart.getMonth() - 1)
-  windowStart.setDate(1)
-  const windowEnd = new Date()
-  windowEnd.setMonth(windowEnd.getMonth() + 6)
-  windowEnd.setDate(0)
+  // Fetch 7-month window (1 prev + current + 6 ahead) — all in IST
+  const windowStart = startOfMonthIST(-1)
+  const windowEnd   = endOfMonthIST(6)
 
   const { data: events } = await supabase
     .from('events')
@@ -48,7 +45,7 @@ export default async function CalendarPage() {
   const { data: roleRow } = await supabase.from('parish_roles')
     .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
   const isAdmin = !!(profileData?.is_admin || roleRow)
-  const serverDate = new Date().toISOString().slice(0, 10)  // 'YYYY-MM-DD', stable for hydration
+  const serverDate = todayIST()  // 'YYYY-MM-DD' in IST, stable for hydration
 
   return (
     <CalendarClient

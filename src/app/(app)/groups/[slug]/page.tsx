@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
+import { todayIST } from '@/lib/dates'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -45,7 +46,7 @@ export default async function GroupPublicPage({ params }: Props) {
     .select('id, title, title_ml, starts_at, venue')
     .eq('group_id', group.id)
     .eq('visibility', 'public')
-    .gte('starts_at', new Date().toISOString())
+    .gte('starts_at', todayIST())
     .order('starts_at')
     .limit(5)
 

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Users, Calendar, User, ShieldCheck } from 'lucide-react'
 import type { Profile } from '@/types/database'
-import { format } from 'date-fns'
+import { todayIST } from '@/lib/dates'
 import UpcomingEvents from './UpcomingEvents'
 
 export default async function HomePage() {
@@ -17,10 +17,8 @@ export default async function HomePage() {
   if (!p || p.status === 'pending') redirect('/auth/pending')
   if (p.status !== 'active') redirect('/auth/disabled')
 
-  // Fetch upcoming events (next 5) — use start-of-today so events that
-  // started earlier today still appear (avoids the IST vs UTC mismatch
-  // where a morning event looks "past" by afternoon UTC time).
-  const todayStr = new Date().toISOString().slice(0, 10)  // 'YYYY-MM-DD'
+  // Use start-of-today in IST so morning events remain visible all day
+  const todayStr = todayIST()
   const { data: events, error: eventsErr } = await supabase
     .from('events')
     .select('id, title, starts_at, venue, visibility')

@@ -23,6 +23,7 @@ export default async function AdminPage() {
   if (!(me as Profile | null)?.is_admin) redirect('/')
 
   const weekFromNow = new Date(Date.now() + 7 * 86400000).toISOString()
+  const todayISOStr = new Date().toISOString().slice(0, 10)
   const [
     { count: totalMembers },
     { count: pendingCount },
@@ -36,7 +37,7 @@ export default async function AdminPage() {
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('groups').select('*', { count: 'exact', head: true }).eq('is_archived', false),
-    supabase.from('events').select('*', { count: 'exact', head: true }).gte('starts_at', new Date().toISOString()).lte('starts_at', weekFromNow),
+    supabase.from('events').select('*', { count: 'exact', head: true }).gte('starts_at', todayISOStr).lte('starts_at', weekFromNow),
     supabase.from('profiles').select('*').eq('status', 'pending').eq('claim_status', 'unclaimed').order('created_at'),
     supabase.from('profiles')
       .select('id, phone, display_name, family_member_id, family_members!family_member_id(full_name, full_name_ml, relation_to_head, family_units(house_name, groups!prayer_group_id(name, name_ml)))')

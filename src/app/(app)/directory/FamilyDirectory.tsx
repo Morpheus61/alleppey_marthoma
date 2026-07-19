@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, Search, Home } from 'lucide-react'
 
+import { IST_TZ } from '@/lib/dates'
+
 export interface FamilyMemberEntry {
   id: string
   full_name: string
@@ -33,15 +35,14 @@ const RELATION_ORDER: Record<string, number> = {
 
 function fmtDate(s: string | null): string | null {
   if (!s) return null
-  const d = new Date(s + 'T00:00:00')
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(s + 'T00:00:00+05:30').toLocaleDateString('en-IN', { timeZone: IST_TZ, day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function fmtAnniv(s: string | null): string | null {
   if (!s) return null
-  const d = new Date(s + 'T00:00:00')
-  const year = d.getFullYear()
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' }) + ` (${year})`
+  const d = new Date(s + 'T00:00:00+05:30')
+  const year = d.toLocaleString('en-IN', { timeZone: IST_TZ, year: 'numeric' })
+  return d.toLocaleDateString('en-IN', { timeZone: IST_TZ, day: 'numeric', month: 'long' }) + ` (${year})`
 }
 
 function waUrl(phone: string): string {

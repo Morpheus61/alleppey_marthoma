@@ -1,8 +1,8 @@
 'use client'
-// Renders upcoming events with times in the browser's local timezone,
-// fixing the server-UTC vs IST mismatch that caused wrong times on the home page.
+// Renders upcoming events with times forced to IST (Asia/Kolkata)
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import { IST_TZ } from '@/lib/dates'
 
 interface Event {
   id: string
@@ -25,9 +25,9 @@ export default function UpcomingEvents({ events }: { events: Event[] }) {
       <div className="space-y-2">
         {events.map(e => {
           const dt = new Date(e.starts_at)
-          const month = dt.toLocaleString('en-IN', { month: 'short' }).toUpperCase()
-          const day   = dt.toLocaleString('en-IN', { day: 'numeric' })
-          const time  = dt.toLocaleString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+          const month = dt.toLocaleString('en-IN', { timeZone: IST_TZ, month: 'short' }).toUpperCase()
+          const day   = dt.toLocaleString('en-IN', { timeZone: IST_TZ, day: 'numeric' })
+          const time  = dt.toLocaleString('en-IN', { timeZone: IST_TZ, hour: 'numeric', minute: '2-digit', hour12: true })
           return (
             <div key={e.id} className="flex gap-3 bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm">
               <div className="shrink-0 bg-brand-900 text-white rounded-lg w-11 h-11 flex flex-col items-center justify-center text-center">

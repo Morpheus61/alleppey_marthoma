@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { IST_TZ } from '@/lib/dates'
 
 export const metadata = { title: 'Arrears by Bhagam' }
 
@@ -52,12 +53,13 @@ export default async function ArrearsPage() {
     paidByFamily.get(e.family_id)!.add(key)
   }
 
-  // Calculate outstanding months from Jan 2024 to current month
+  // Calculate outstanding months from Jan 2024 to current IST month
   const startYear = 2024
-  const now = new Date()
+  const nowIST = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000)
+  const now = nowIST
   const months: string[] = []
   let d = new Date(startYear, 0, 1)
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const currentMonth = new Date(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), 1)
   while (d <= currentMonth) {
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
     d = new Date(d.getFullYear(), d.getMonth() + 1, 1)

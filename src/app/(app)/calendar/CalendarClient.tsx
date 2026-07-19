@@ -2,6 +2,7 @@
 import { useState, useRef, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, X, Plus, Pencil } from 'lucide-react'
 import { createEvent, deleteEvent, updateEvent } from './actions'
+import { IST_TZ } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -81,7 +82,7 @@ function consequenceSentence(recurrence: string, date: string, venue: string, re
   const d = new Date(date)
   const weekday = DOW[d.getDay()]
   let line = ''
-  if (recurrence === 'none')    line = `Will appear once on ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}.`
+  if (recurrence === 'none')    line = `Will appear once on ${d.toLocaleDateString('en-IN', { timeZone: IST_TZ, day: 'numeric', month: 'long' })}.`
   if (recurrence === 'weekly')  line = `Will appear every ${weekday}.`
   if (recurrence === 'monthly') line = `Will appear monthly on the ${d.getDate()}.`
   const venueNote = venue ? ` At ${venue}.` : ''
@@ -196,7 +197,7 @@ function EventSheet({
     onClose()
   }
 
-  const dispDate = new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const dispDate = new Date(date + 'T00:00:00+05:30').toLocaleDateString('en-IN', { timeZone: IST_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const consequence = title ? consequenceSentence(recurrence, date, venue, reminderMin) : null
 
   return (
@@ -572,7 +573,7 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [editingEvent, setEditingEvent] = useState<CalEvent | null>(null)
-  const dispDate = new Date(day + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
+  const dispDate = new Date(day + 'T00:00:00+05:30').toLocaleDateString('en-IN', { timeZone: IST_TZ, weekday: 'long', day: 'numeric', month: 'long' })
 
   async function handleDelete(id: string) {
     setDeleting(id)
@@ -608,7 +609,7 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
                   <p className="font-semibold text-sm">{ev.title}</p>
                   {ev.title_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{ev.title_ml}</p>}
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {new Date(ev.starts_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(ev.starts_at).toLocaleTimeString('en-IN', { timeZone: IST_TZ, hour: '2-digit', minute: '2-digit' })}
                     {ev.venue ? ` · ${ev.venue}` : ''}
                     {ev.groups ? ` · ${ev.groups.name_ml ?? ev.groups.name}` : ''}
                   </p>
@@ -805,9 +806,9 @@ export default function CalendarClient({
                   <p className="font-semibold text-sm">{ev.title}</p>
                   {ev.title_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{ev.title_ml}</p>}
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {new Date(ev.starts_at).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })}
+                    {new Date(ev.starts_at).toLocaleDateString('en-IN', { timeZone: IST_TZ, weekday:'short', day:'numeric', month:'short' })}
                     {' '}·{' '}
-                    {new Date(ev.starts_at).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}
+                    {new Date(ev.starts_at).toLocaleTimeString('en-IN', { timeZone: IST_TZ, hour:'2-digit', minute:'2-digit' })}
                     {ev.venue ? ` · ${ev.venue}` : ''}
                   </p>
                 </div>

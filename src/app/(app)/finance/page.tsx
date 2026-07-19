@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { IST_TZ } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'My Subscriptions' }
@@ -77,18 +78,20 @@ export default async function MemberFinancePage() {
 
   // Build Masavari month ledger
   const startYear = parseInt(setting('masavari_start_year') || '2024')
-  const now = new Date()
+  // Use IST for current month so the ledger doesn't lag by 5h30m
+  const nowIST = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000)
+  const now = nowIST
   const masavariMonths: { key: string; label: string; isoDate: string; status: 'verified'|'submitted'|'outstanding' }[] = []
   if (masavariType) {
     let d = new Date(startYear, 0, 1)
-    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const currentMonth = new Date(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), 1)
     while (d <= currentMonth) {
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
       const isoDate = `${key}-01`
       const entry = (masavariEntries ?? []).find(e => e.period_month?.startsWith(key))
       masavariMonths.push({
         key, isoDate,
-        label: d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+        label: d.toLocaleDateString('en-IN', { timeZone: IST_TZ, month: 'short', year: 'numeric' }),
         status: entry ? (entry.status === 'verified' ? 'verified' : 'submitted') : 'outstanding',
       })
       d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
