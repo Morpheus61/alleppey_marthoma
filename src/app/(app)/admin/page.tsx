@@ -33,9 +33,8 @@ export default async function AdminPage() {
     { data: claimsRaw },
     { data: membersRaw },
     { data: groupsRaw },
-    { data: headMembersRaw },
   ] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase.from('family_units').select('*', { count: 'exact', head: true }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('groups').select('*', { count: 'exact', head: true }).eq('is_archived', false),
     supabase.from('events').select('*', { count: 'exact', head: true }).gte('starts_at', todayISOStr).lte('starts_at', weekFromNow),
@@ -44,16 +43,14 @@ export default async function AdminPage() {
       .select('id, phone, display_name, family_member_id, family_members!family_member_id(full_name, full_name_ml, relation_to_head, family_units(house_name, groups!prayer_group_id(name, name_ml)))')
       .eq('claim_status', 'pending_claim')
       .order('created_at'),
-    supabase.from('profiles').select('id,display_name,full_name,phone,house_name,is_admin,status').in('status', ['active','disabled']).order('display_name,full_name'),
+    supabase.from('family_units').select('id, house_name, house_name_ml, family_members(id, full_name, full_name_ml, relation_to_head, is_deceased, profile_id, profiles!profile_id(id, phone, is_admin, status))').order('house_name'),
     supabase.from('groups').select('id,name,name_ml,slug,group_type,is_archived').order('name'),
-    supabase.from('family_members').select('profile_id').eq('relation_to_head', 'head').not('profile_id', 'is', null),
   ])
 
   const pending      = (pendingRaw  as Profile[] | null) ?? []
   const claims       = (claimsRaw   as unknown[]) ?? []
-  const members  = (membersRaw  as Pick<Profile,'id'|'display_name'|'full_name'|'phone'|'house_name'|'is_admin'|'status'>[] | null) ?? []
+  const families     = (membersRaw as unknown as { id: string; house_name: string; house_name_ml: string | null; family_members: unknown[] }[] | null) ?? []
   const groups       = (groupsRaw   as Pick<Group,'id'|'name'|'name_ml'|'slug'|'group_type'|'is_archived'>[] | null) ?? []
-  const headIds      = new Set(((headMembersRaw as { profile_id: string }[] | null) ?? []).map(m => m.profile_id))
   const activeGroups   = groups.filter(g => !g.is_archived)
   const archivedGroups = groups.filter(g => g.is_archived)
 
@@ -88,7 +85,7 @@ export default async function AdminPage() {
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Active Members',  value: totalMembers  ?? 0 },
+          { label: 'Member Families', value: totalMembers  ?? 0 },
           { label: 'Pending Approval',value: pendingCount  ?? 0, warn: (pendingCount ?? 0) > 0 },
           { label: 'Groups',          value: groupCount    ?? 0 },
           { label: 'Events This Week',value: upcomingEvents?? 0 },
@@ -224,33 +221,61 @@ export default async function AdminPage() {
         )}
       </section>
 
-      {/* ── Members ── */}
+      {/* ── Member Families ── */}
       <section>
-        <h2 className="text-lg font-bold text-brand-900 mb-3">Members ({members.length})</h2>
+        <h2 className="text-lg font-bold text-brand-900 mb-3">Member Families ({families.length})</h2>
         <div className="space-y-2">
-          {members.map(m => (
-            <div key={m.id} className="flex items-center gap-3 bg-white rounded-xl border px-4 py-3 shadow-sm">
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">
-                  {m.full_name}
-                  {m.is_admin && <span className={`${badge} bg-brand-900 text-white ml-2`}>Admin</span>}
-                  {headIds.has(m.id) && <span className={`${badge} bg-amber-100 text-amber-800 border border-amber-200 ml-2`}>Head of Family</span>}
-                  {m.status === 'disabled' && <span className={`${badge} bg-gray-200 text-gray-500 ml-2`}>Disabled</span>}
-                </p>
-                <p className="text-xs text-muted-foreground">{m.phone}</p>
-                {m.house_name && (
-                  <span className="inline-block mt-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{m.house_name}</span>
-                )}
-              </div>
-              {m.id !== user.id && (
-                <form action={toggleAdmin.bind(null, m.id, !m.is_admin)}>
-                  <button className={`${btn} ${m.is_admin ? 'bg-gray-100 text-gray-700' : 'bg-brand-50 text-brand-900 border border-brand-200'} hover:opacity-80`}>
-                    {m.is_admin ? 'Revoke Admin' : 'Make Admin'}
-                  </button>
-                </form>
-              )}
-            </div>
-          ))}
+          {families.map(fam => {
+            type FM = { id: string; full_name: string; full_name_ml: string | null; relation_to_head: string | null; is_deceased: boolean; profiles: { id: string; phone: string; is_admin: boolean; status: string } | null }
+            const mems = (fam.family_members as unknown as FM[]) ?? []
+            const head = mems.find(m => m.relation_to_head === 'head') ?? mems[0] ?? null
+            const headProf = head?.profiles ?? null
+            return (
+              <details key={fam.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none list-none hover:bg-amber-50/60 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="font-semibold text-sm">{head?.full_name ?? fam.house_name}</p>
+                      {head && <span className={`${badge} bg-amber-100 text-amber-800 border border-amber-200`}>Head of Family</span>}
+                      {headProf?.is_admin && <span className={`${badge} bg-brand-900 text-white`}>Admin</span>}
+                      {headProf?.status === 'disabled' && <span className={`${badge} bg-gray-200 text-gray-500`}>Disabled</span>}
+                    </div>
+                    {headProf && <p className="text-xs text-muted-foreground mt-0.5">{headProf.phone}</p>}
+                    <span className="inline-block mt-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{fam.house_name}</span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground shrink-0">{mems.length} {mems.length === 1 ? 'member' : 'members'} ›</span>
+                </summary>
+                <div className="border-t border-amber-50 divide-y divide-amber-50 px-4 py-2 space-y-0">
+                  {mems.map(m => {
+                    const prof = m.profiles
+                    return (
+                      <div key={m.id} className="flex items-center gap-3 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="text-sm font-medium">{m.full_name}</p>
+                            {m.relation_to_head === 'head' && <span className={`${badge} bg-amber-100 text-amber-800 border border-amber-200`}>Head of Family</span>}
+                            {prof?.is_admin && <span className={`${badge} bg-brand-900 text-white`}>Admin</span>}
+                            {m.is_deceased && <span className="text-[10px] text-gray-400">†</span>}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground capitalize">
+                            {m.relation_to_head ?? 'member'}
+                            {prof ? ' · ' + prof.phone : ' · not registered'}
+                          </p>
+                        </div>
+                        {prof && prof.id !== user.id && (
+                          <form action={toggleAdmin.bind(null, prof.id, !prof.is_admin)}>
+                            <button className={`${btn} ${prof.is_admin ? 'bg-gray-100 text-gray-700' : 'bg-brand-50 text-brand-900 border border-brand-200'} hover:opacity-80`}>
+                              {prof.is_admin ? 'Revoke Admin' : 'Make Admin'}
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </details>
+            )
+          })}
         </div>
       </section>
 
