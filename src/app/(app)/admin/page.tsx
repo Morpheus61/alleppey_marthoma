@@ -34,6 +34,7 @@ export default async function AdminPage() {
     { data: membersRaw },
     { data: groupsRaw },
     { data: profilesRaw },
+    { data: familyMembersRaw },
   ] = await Promise.all([
     supabase.from('family_units').select('*', { count: 'exact', head: true }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -44,14 +45,24 @@ export default async function AdminPage() {
       .select('id, phone, display_name, family_member_id, family_members!family_member_id(full_name, full_name_ml, relation_to_head, family_units(house_name, groups!prayer_group_id(name, name_ml)))')
       .eq('claim_status', 'pending_claim')
       .order('created_at'),
-    supabase.from('family_units').select('id, house_name, house_name_ml, family_members(id, full_name, full_name_ml, relation_to_head, is_deceased, profile_id)').order('house_name'),
+    supabase.from('family_units').select('id, house_name, house_name_ml').order('house_name'),
     supabase.from('groups').select('id,name,name_ml,slug,group_type,is_archived').order('name'),
     supabase.from('profiles').select('id, phone, is_admin, status').in('status', ['active','disabled']),
+    supabase.from('family_members').select('id, family_id, full_name, full_name_ml, relation_to_head, is_deceased, profile_id'),
   ])
 
   const pending      = (pendingRaw  as Profile[] | null) ?? []
   const claims       = (claimsRaw   as unknown[]) ?? []
-  const families     = (membersRaw as unknown as { id: string; house_name: string; house_name_ml: string | null; family_members: unknown[] }[] | null) ?? []
+  type FMFlat = { id: string; family_id: string; full_name: string; full_name_ml: string | null; relation_to_head: string | null; is_deceased: boolean; profile_id: string | null }
+  const fmList     = ((familyMembersRaw as FMFlat[] | null) ?? [])
+  const fmByFamily = new Map<string, FMFlat[]>()
+  for (const fm of fmList) {
+    const arr = fmByFamily.get(fm.family_id) ?? []
+    arr.push(fm)
+    fmByFamily.set(fm.family_id, arr)
+  }
+  const families   = ((membersRaw as { id: string; house_name: string; house_name_ml: string | null }[] | null) ?? [])
+    .map(f => ({ ...f, family_members: (fmByFamily.get(f.id) ?? []) as unknown[] }))
   type ProfEntry = { id: string; phone: string; is_admin: boolean; status: string }
   const profileMap   = new Map(((profilesRaw as ProfEntry[] | null) ?? []).map(p => [p.id, p]))
   const groups       = (groupsRaw   as Pick<Group,'id'|'name'|'name_ml'|'slug'|'group_type'|'is_archived'>[] | null) ?? []
