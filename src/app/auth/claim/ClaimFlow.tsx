@@ -130,7 +130,7 @@ export default function ClaimFlow() {
                   className="w-full text-left rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm hover:border-brand-900 hover:shadow-md disabled:opacity-50 transition-all">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-                      <span className="text-brand-900 font-bold text-sm">{m.full_name[0].toUpperCase()}</span>
+                      <span className="text-brand-900 font-bold text-sm">{(m.full_name?.[0] ?? '?').toUpperCase()}</span>
                     </div>
                     <div>
                       <p className="font-semibold text-sm">{m.full_name}</p>

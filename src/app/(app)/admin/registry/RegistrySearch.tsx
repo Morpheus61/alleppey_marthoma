@@ -112,7 +112,7 @@ export default function RegistrySearch({
                   {linkingId !== p.id ? (
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-                        <span className="text-brand-900 font-bold text-sm">{p.full_name[0].toUpperCase()}</span>
+                        <span className="text-brand-900 font-bold text-sm">{(p.full_name?.[0] ?? p.phone?.[0] ?? '?').toUpperCase()}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm">{p.full_name}</p>

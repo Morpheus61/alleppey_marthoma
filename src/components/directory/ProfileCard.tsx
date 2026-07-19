@@ -62,7 +62,7 @@ export default function ProfileCard({ profile, action, onPhotoUpload }: Props) {
             {profile.avatar_url ? (
               <Image src={profile.avatar_url} alt={profile.full_name} width={64} height={64} className="object-cover w-full h-full" unoptimized />
             ) : (
-              <span className="text-brand-900 font-bold text-2xl">{profile.full_name[0].toUpperCase()}</span>
+              <span className="text-brand-900 font-bold text-2xl">{(profile.full_name?.[0] ?? '?').toUpperCase()}</span>
             )}
           </div>
           <div className="flex-1 min-w-0">
