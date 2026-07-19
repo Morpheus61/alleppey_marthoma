@@ -33,6 +33,7 @@ export default async function AdminPage() {
     { data: claimsRaw },
     { data: membersRaw },
     { data: groupsRaw },
+    { data: profilesRaw },
   ] = await Promise.all([
     supabase.from('family_units').select('*', { count: 'exact', head: true }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -43,13 +44,16 @@ export default async function AdminPage() {
       .select('id, phone, display_name, family_member_id, family_members!family_member_id(full_name, full_name_ml, relation_to_head, family_units(house_name, groups!prayer_group_id(name, name_ml)))')
       .eq('claim_status', 'pending_claim')
       .order('created_at'),
-    supabase.from('family_units').select('id, house_name, house_name_ml, family_members(id, full_name, full_name_ml, relation_to_head, is_deceased, profile_id, profiles!profile_id(id, phone, is_admin, status))').order('house_name'),
+    supabase.from('family_units').select('id, house_name, house_name_ml, family_members(id, full_name, full_name_ml, relation_to_head, is_deceased, profile_id)').order('house_name'),
     supabase.from('groups').select('id,name,name_ml,slug,group_type,is_archived').order('name'),
+    supabase.from('profiles').select('id, phone, is_admin, status').in('status', ['active','disabled']),
   ])
 
   const pending      = (pendingRaw  as Profile[] | null) ?? []
   const claims       = (claimsRaw   as unknown[]) ?? []
   const families     = (membersRaw as unknown as { id: string; house_name: string; house_name_ml: string | null; family_members: unknown[] }[] | null) ?? []
+  type ProfEntry = { id: string; phone: string; is_admin: boolean; status: string }
+  const profileMap   = new Map(((profilesRaw as ProfEntry[] | null) ?? []).map(p => [p.id, p]))
   const groups       = (groupsRaw   as Pick<Group,'id'|'name'|'name_ml'|'slug'|'group_type'|'is_archived'>[] | null) ?? []
   const activeGroups   = groups.filter(g => !g.is_archived)
   const archivedGroups = groups.filter(g => g.is_archived)
@@ -226,10 +230,10 @@ export default async function AdminPage() {
         <h2 className="text-lg font-bold text-brand-900 mb-3">Member Families ({families.length})</h2>
         <div className="space-y-2">
           {families.map(fam => {
-            type FM = { id: string; full_name: string; full_name_ml: string | null; relation_to_head: string | null; is_deceased: boolean; profiles: { id: string; phone: string; is_admin: boolean; status: string } | null }
+            type FM = { id: string; full_name: string; full_name_ml: string | null; relation_to_head: string | null; is_deceased: boolean; profile_id: string | null }
             const mems = (fam.family_members as unknown as FM[]) ?? []
             const head = mems.find(m => m.relation_to_head === 'head') ?? mems[0] ?? null
-            const headProf = head?.profiles ?? null
+            const headProf = head?.profile_id ? (profileMap.get(head.profile_id) ?? null) : null
             return (
               <details key={fam.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
                 <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none list-none hover:bg-amber-50/60 transition-colors">
@@ -247,7 +251,7 @@ export default async function AdminPage() {
                 </summary>
                 <div className="border-t border-amber-50 divide-y divide-amber-50 px-4 py-2 space-y-0">
                   {mems.map(m => {
-                    const prof = m.profiles
+                    const prof = m.profile_id ? (profileMap.get(m.profile_id as string) ?? null) : null
                     return (
                       <div key={m.id} className="flex items-center gap-3 py-2.5">
                         <div className="flex-1 min-w-0">

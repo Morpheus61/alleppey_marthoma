@@ -183,10 +183,12 @@ export default function RegistrySearch({
                 <p className="font-semibold text-sm">{h.house_name}</p>
                 {h.house_name_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{h.house_name_ml}</p>}
                 {h.head_name && (
-                  <p className="text-xs font-medium text-brand-900 mt-0.5">
-                    {h.head_name}
-                    {h.head_name_ml && <span className="font-malayalam text-muted-foreground font-normal ml-1.5" lang="ml">{h.head_name_ml}</span>}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                    <p className="text-xs font-medium text-brand-900">{h.head_name}
+                      {h.head_name_ml && <span className="font-malayalam text-muted-foreground font-normal ml-1" lang="ml">{h.head_name_ml}</span>}
+                    </p>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-full font-semibold">Head of Family</span>
+                  </div>
                 )}
                 {h.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{h.address}</p>}
                 <div className="flex items-center gap-2 mt-2">
