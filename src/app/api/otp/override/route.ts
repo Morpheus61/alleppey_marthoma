@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
+  console.log('[otp/override] handler invoked')
   let phone = '', channel = 'whatsapp'
   try {
     const body = await req.json() as { phone?: string; channel?: string }
@@ -51,7 +52,13 @@ export async function POST(req: NextRequest) {
       }
     )
 
-    const data = await res.json() as { status?: string; message?: string; code?: number }
+    let data: { status?: string; message?: string; code?: number }
+    try {
+      data = await res.json() as { status?: string; message?: string; code?: number }
+    } catch {
+      console.error('[otp/override] Twilio returned non-JSON body, HTTP status:', res.status)
+      return NextResponse.json({ error: 'OTP service returned unexpected response' }, { status: 502 })
+    }
     console.log(`[otp/override] Twilio response for ${phone} via ${channel}:`, JSON.stringify(data))
 
     if (data.status === 'pending') {

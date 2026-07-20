@@ -94,18 +94,27 @@ export default function LoginPage() {
       const msg = otpErr.message ?? ''
       if (msg.includes('not found') || msg.includes('not registered') || msg.includes('User not found')) {
         setError('This number is not registered with the church. Please contact the secretary.')
-      } else {
-        setError(msg)
+        setLoading(false)
+        return
       }
-      setLoading(false)
-      return
+      // GoTrue only reaches Twilio AFTER confirming the user exists.
+      // A Twilio delivery error (e.g. SMS prefix blocked by fraud guard) means
+      // the user IS registered but SMS failed. For WhatsApp we can fall through
+      // and let the override route create the verification from scratch.
+      // For SMS-only requests, surface the error immediately.
+      if (channel !== 'whatsapp') {
+        setError(msg)
+        setLoading(false)
+        return
+      }
+      // channel === 'whatsapp': SMS failed but user is registered → fall through
     }
 
-    // Step 2 — For WhatsApp: call Twilio Verify directly to override the
-    // channel. This cancels the SMS verification Supabase just created and
-    // creates a new WhatsApp one. GoTrue's nonce remains valid — when
-    // verifyOtp is called, GoTrue asks Twilio to check the OTP and Twilio
-    // finds the WhatsApp verification approved.
+    // Step 2 — For WhatsApp: call Twilio Verify directly with Channel=whatsapp.
+    // If the SMS step above succeeded this cancels it and re-creates with WhatsApp.
+    // If the SMS step failed (fraud block etc.) this creates the verification fresh.
+    // GoTrue's verifyOtp still works — it calls Twilio Verify Check which finds
+    // the WhatsApp verification approved.
     if (channel === 'whatsapp') {
       try {
         const res = await fetch('/api/otp/override', {
