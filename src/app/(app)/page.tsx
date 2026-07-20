@@ -80,7 +80,7 @@ export default async function HomePage() {
       {/* ── The Pulpit card ── */}
       {pulpitMessage && <HomePulpitCard message={pulpitMessage} />}
 
-      {/* ── Quick links ── */}}
+      {/* ── Quick links ── */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { href: '/groups',   icon: Users,       label: 'Parish Groups',  sub: 'Browse & join groups'      },
