@@ -22,11 +22,17 @@ begin
       'Ensure the number has completed OTP sign-in at least once.';
   end if;
 
-  -- Ensure a public.profiles row exists and is active
-  insert into public.profiles (id, status)
-  values (v_user_id, 'active')
-  on conflict (id) do update
-    set status = 'active';
+  -- Profile was created by the auth trigger on first sign-in (phone already set).
+  -- Just ensure it is active.
+  update public.profiles
+  set status = 'active'
+  where id = v_user_id;
+
+  if not found then
+    raise exception
+      'Profile for % not found. The auth trigger should have created it on first sign-in.',
+      v_user_id;
+  end if;
 
   v_profile_id := v_user_id;
 
