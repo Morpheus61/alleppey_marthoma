@@ -10,8 +10,6 @@ export const metadata = {
   openGraph: {
     title: 'The Pulpit · ഇടയ സന്ദേശം',
     description: 'Messages from the Vicar, St. George Marthoma Syrian Church, Alappuzha',
-    title: 'The Pulpit · ഇടയ സന്ദേശം',
-    description: 'Messages from the Vicar, St. George Marthoma Syrian Church, Alappuzha',
     images: ['/pulpit_card.png'],
   },
 }
