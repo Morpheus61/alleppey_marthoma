@@ -155,9 +155,10 @@ export default function FamilyDirectory({
               <div className="border-t border-amber-50 divide-y divide-amber-50">
 
                 {/* Address + Anniversary row */}
-                {(f.address || f.wedding_date) && (
+                {/* TRIAL: address hidden from non-admins (revert: remove isAdmin guard) */}
+                {((isAdmin && f.address) || f.wedding_date) && (
                   <div className="px-4 py-3 grid sm:grid-cols-2 gap-3">
-                    {f.address && (
+                    {isAdmin && f.address && (
                       <div>
                         <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">
                           Address
@@ -213,7 +214,8 @@ export default function FamilyDirectory({
                             )}
                           </p>
                           {/* Phone — show for all if present; email for admin only */}
-                          {m.phone && (
+                          {/* TRIAL: phone hidden from non-admins (revert: remove isAdmin guard) */}
+                          {isAdmin && m.phone && (
                             <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
                               <span>📱 {m.phone}</span>
                               <a

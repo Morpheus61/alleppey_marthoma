@@ -1,5 +1,19 @@
 # St. George Marthoma Church — Community PWA
 
+## ⚠️ TRIAL MODE — Launch-Day Revert Checklist
+
+> Run `grep -rn "// TRIAL:"` to find every change that must be reverted before launch.
+
+- [ ] `src/app/auth/login/page.tsx` — `shouldCreateUser: true → false`; restore "not registered" error block
+- [ ] `src/app/(app)/layout.tsx:23` — restore `if (profile.status === 'pending') redirect('/auth/pending')`  and `if (profile.status !== 'active') redirect('/auth/disabled')`
+- [ ] `src/app/(app)/page.tsx:19` — restore `if (!p || p.status === 'pending') redirect('/auth/pending')` + `if (p.status !== 'active') redirect('/auth/disabled')`
+- [ ] `src/app/(app)/directory/FamilyDirectory.tsx` — remove `isAdmin &&` guard from phone block (~line 210) and address outer condition (~line 160)
+- [ ] **Process trial signups:** `SELECT * FROM profiles WHERE claim_status = 'unclaimed'` — Secretary matches against physical register, links each to a `family_members` row, sets `status = 'active'`
+- [ ] Run `supabase/seed_trial.sql` again if Bhagam group slugs were modified
+- [ ] Confirm Supabase Dashboard → Authentication → Hooks → Send SMS hook is **removed** (not just disabled)
+
+---
+
 A Progressive Web App for St. George Marthoma Syrian Church, Alappuzha, Kerala.
 
 ## Tech Stack

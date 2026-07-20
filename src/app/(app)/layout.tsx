@@ -20,8 +20,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const profile = data as Pick<Profile, 'status' | 'is_admin' | 'full_name'> | null
 
   if (!profile) redirect('/auth/login')
-  if (profile.status === 'pending') redirect('/auth/pending')
-  if (profile.status !== 'active') redirect('/auth/disabled')
+  // TRIAL: allow pending users into the app (revert on launch day: restore pending → /auth/pending)
+  if (profile.status === 'disabled') redirect('/auth/disabled')
 
   // Check parish_roles — fetch role for all management levels in one query
   const { data: roleRow } = await supabase

@@ -16,8 +16,9 @@ export default async function HomePage() {
   const { data: profileData, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (profileErr) console.error('[HomePage] profile error:', profileErr.message, profileErr.code)
   const p = profileData as Profile | null
-  if (!p || p.status === 'pending') redirect('/auth/pending')
-  if (p.status !== 'active') redirect('/auth/disabled')
+  if (!p) redirect('/auth/login')
+  // TRIAL: allow pending users into the app (revert on launch day: restore pending → /auth/pending)
+  if (p.status === 'disabled') redirect('/auth/disabled')
 
   // Use start-of-today in IST so morning events remain visible all day
   const todayStr = todayIST()
@@ -64,7 +65,8 @@ export default async function HomePage() {
     }
   }
 
-  const firstName = p.full_name.split(' ')[0]
+  // Permanent fix: safe split when full_name is empty (trial users start nameless)
+  const firstName = p.full_name?.trim() ? p.full_name.split(' ')[0] : ''
 
   return (
     <div className="max-w-lg md:max-w-3xl mx-auto px-4 py-6 space-y-6">
@@ -72,9 +74,15 @@ export default async function HomePage() {
       {/* ── Welcome banner ── */}
       <div className="rounded-2xl bg-brand-900 text-white px-5 py-5 shadow-lg">
         <p className="text-xs font-semibold tracking-widest uppercase text-brand-300 mb-1">Welcome back</p>
-        <p className="text-xl font-bold">{p.full_name}</p>
+        <p className="text-xl font-bold">{firstName ? p.full_name : 'Welcome!'}</p>
         {p.full_name_ml && <p className="text-sm text-brand-200 font-malayalam mt-0.5" lang="ml">{p.full_name_ml}</p>}
-        <p className="text-xs text-brand-300 mt-2 italic">✦ Lighted to Lighten ✦</p>
+        {/* TRIAL: nudge nameless users to fill in their profile */}
+        {!firstName && (
+          <a href="/me" className="mt-2 inline-block text-xs text-amber-300 hover:text-amber-100 underline underline-offset-2 transition-colors">
+            Complete your profile →
+          </a>
+        )}
+        {firstName && <p className="text-xs text-brand-300 mt-2 italic">❖ Lighted to Lighten ❖</p>}
       </div>
 
       {/* ── The Pulpit card ── */}
