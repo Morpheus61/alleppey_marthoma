@@ -22,16 +22,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (profile.status === 'pending') redirect('/auth/pending')
   if (profile.status !== 'active') redirect('/auth/disabled')
 
-  // Also check parish_roles — a super_admin role grants admin access even if is_admin=false
+  // Check parish_roles — fetch role for all management levels in one query
   const { data: roleRow } = await supabase
     .from('parish_roles')
-    .select('id')
+    .select('role')
     .eq('profile_id', user.id)
-    .in('role', ['admin', 'super_admin'])
+    .in('role', ['deacon', 'treasurer', 'admin', 'super_admin'])
     .is('revoked_at', null)
-    .maybeSingle()
+    .order('role') // admin < deacon < super_admin < treasurer alphabetically — we pick highest below
+    .limit(4)
 
-  const isAdmin = !!(profile.is_admin || roleRow)
+  // Determine effective access level
+  const roles = Array.isArray(roleRow) ? (roleRow as { role: string }[]).map(r => r.role) : []
+  const isAdmin = !!(profile.is_admin || roles.includes('admin') || roles.includes('super_admin'))
+  const isFinanceRole = roles.includes('deacon') || roles.includes('treasurer')
+
+  // Admin tab destination: full admin for admins/super_admin; finance hub for deacon/treasurer
+  const adminHref = isAdmin ? '/admin' : (isFinanceRole ? '/admin/finance' : null)
 
   return (
     <div className="min-h-screen bg-[#f9f0e3]">
@@ -41,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* ── Body: sidebar (desktop) + content ── */}
       <div className="md:flex">
         {/* Desktop sidebar — hidden on mobile */}
-        <SidebarNav isAdmin={isAdmin} />
+        <SidebarNav isAdmin={isAdmin} adminHref={adminHref} />
 
         {/* Page content */}
         <main className="flex-1 pb-20 md:pb-8 min-h-[calc(100vh-52px)] overflow-y-auto">
@@ -50,7 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* ── Bottom nav — mobile only ── */}
-      <BottomNav isAdmin={isAdmin} />
+      <BottomNav isAdmin={isAdmin} adminHref={adminHref} />
 
       {/* ── PWA install prompt ── */}
       <InstallPrompt />

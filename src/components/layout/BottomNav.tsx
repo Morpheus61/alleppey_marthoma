@@ -13,11 +13,11 @@ const items = [
   { href: '/me',         icon: User,        label: 'Profile'   },
 ]
 
-export default function BottomNav({ isAdmin }: { isAdmin: boolean }) {
+export default function BottomNav({ isAdmin, adminHref }: { isAdmin: boolean; adminHref?: string | null }) {
   const pathname = usePathname()
 
-  const allItems = isAdmin
-    ? [...items, { href: '/admin', icon: ShieldCheck, label: 'Admin' }]
+  const allItems = adminHref
+    ? [...items, { href: adminHref, icon: ShieldCheck, label: isAdmin ? 'Admin' : 'Office' }]
     : items
 
   return (

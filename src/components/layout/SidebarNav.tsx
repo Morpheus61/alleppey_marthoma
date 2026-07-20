@@ -15,11 +15,11 @@ const baseItems = [
   { href: '/certificates',  icon: ScrollText,  label: 'Certificates' },
 ]
 
-export default function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
+export default function SidebarNav({ isAdmin, adminHref }: { isAdmin: boolean; adminHref?: string | null }) {
   const pathname = usePathname()
 
-  const items = isAdmin
-    ? [...baseItems, { href: '/admin', icon: ShieldCheck, label: 'Admin' }]
+  const items = adminHref
+    ? [...baseItems, { href: adminHref, icon: ShieldCheck, label: isAdmin ? 'Admin' : 'Office' }]
     : baseItems
 
   return (

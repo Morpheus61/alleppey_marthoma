@@ -10,7 +10,7 @@ export default async function ArrearsPage() {
   if (!user) redirect('/auth/login')
   const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   const { data: r } = await supabase.from('parish_roles')
-    .select('role').eq('profile_id', user.id).in('role', ['treasurer','admin','super_admin']).is('revoked_at', null).maybeSingle()
+    .select('role').eq('profile_id', user.id).in('role', ['deacon','treasurer','admin','super_admin']).is('revoked_at', null).maybeSingle()
   if (!p?.is_admin && !r) redirect('/admin')
 
   // Get Masavari type
