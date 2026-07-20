@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import Image from 'next/image'
 import MessageCard from '@/components/pulpit/MessageCard'
 import type { PulpitMessage } from '@/lib/pulpit/types'
 import { IST_TZ } from '@/lib/dates'
@@ -93,13 +94,17 @@ export default async function PulpitPage({
   return (
     <div className="max-w-lg md:max-w-2xl mx-auto px-4 py-6 space-y-6">
 
-      {/* Hero banner */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/pulpit-banner.png"
-        alt="The Pulpit — ഇടയ സന്ദേശം, Messages from the Pulpit"
-        className="w-full rounded-xl block shadow-sm"
-      />
+      {/* Hero banner — Next.js Image serves WebP at device-appropriate size */}
+      <div className="relative w-full rounded-xl overflow-hidden shadow-sm aspect-[16/7]">
+        <Image
+          src="/pulpit-banner.png"
+          alt="The Pulpit — ഇടയ സന്ദേശം, Messages from the Pulpit"
+          fill
+          priority
+          style={{ objectFit: 'cover', objectPosition: 'center' }}
+          sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 1024px) 672px, 672px"
+        />
+      </div>
 
       {/* Admin controls */}
       {isAdmin && (

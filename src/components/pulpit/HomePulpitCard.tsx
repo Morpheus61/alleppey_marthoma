@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronDown } from 'lucide-react'
 import AmenButton from './AmenButton'
 import ScriptureBlock from './ScriptureBlock'
@@ -78,20 +79,17 @@ export default function HomePulpitCard({ message }: { message: PulpitMessage }) 
           }}
         >
           <div className="border-t border-amber-100">
-            {/* Header image */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/pulpit-banner.png"
-              alt="The Pulpit"
-              onClick={e => e.stopPropagation()}
-              style={{
-                width: '100%',
-                display: 'block',
-                maxHeight: '140px',
-                objectFit: 'cover',
-                objectPosition: 'center top',
-              }}
-            />
+            {/* Header image — Next.js Image: WebP + device-sized */}
+            <div className="relative w-full" style={{ height: '140px' }}>
+              <Image
+                src="/pulpit-banner.png"
+                alt="The Pulpit"
+                fill
+                style={{ objectFit: 'cover', objectPosition: 'center top' }}
+                sizes="(max-width: 640px) 100vw, 640px"
+                onClick={e => e.stopPropagation()}
+              />
+            </div>
 
             <div className="px-4 pb-4 pt-3">
               <ScriptureBlock
