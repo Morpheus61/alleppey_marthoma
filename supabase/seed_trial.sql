@@ -21,8 +21,8 @@ on conflict (slug) do nothing;
 -- Functional ministry groups (admin enters descriptions via admin UI)
 insert into public.groups (name, name_ml, slug, group_type, description, is_archived)
 values
-  ('Choir',               'ഗായക സംഘം',        'choir',         'ministry', 'Church Choir — Sunday services and special programmes', false),
-  ('Sevika Sangam',       'സേവിക സംഘം',        'sevika-sangam', 'ministry', 'Sevika Sangam — Women''s fellowship', false),
-  ('Youth Fellowship',    'യൂത്ത് ഫെല്ലോഷിപ്പ്', 'youth',         'ministry', 'Youth Fellowship', false),
-  ('Pain & Palliative',   'സേവന വേദി',          'palliative',    'ministry', 'Pain & Palliative Care ministry', false)
+  ('Choir',               'ഗായക സംഘം',        'choir',         'functional', 'Church Choir — Sunday services and special programmes', false),
+  ('Sevika Sangam',       'സേവിക സംഘം',        'sevika-sangam', 'functional', 'Sevika Sangam — Women''s fellowship', false),
+  ('Youth Fellowship',    'യൂത്ത് ഫെല്ലോഷിപ്പ്', 'youth',         'youth',      'Youth Fellowship', false),
+  ('Pain & Palliative',   'സേവന വേദി',          'palliative',    'functional', 'Pain & Palliative Care ministry', false)
 on conflict (slug) do nothing;
