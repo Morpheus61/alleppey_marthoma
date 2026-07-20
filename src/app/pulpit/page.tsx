@@ -10,7 +10,7 @@ export const metadata = {
   openGraph: {
     title: 'The Pulpit · ഇടയ സന്ദേശം',
     description: 'Messages from the Vicar, St. George Marthoma Syrian Church, Alappuzha',
-    images: ['/pulpit_card.png'],
+    images: ['/pulpit-banner.png'],
   },
 }
 
@@ -96,7 +96,7 @@ export default async function PulpitPage({
       {/* Hero banner */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/pulpit_card.png"
+        src="/pulpit-banner.png"
         alt="The Pulpit — ഇടയ സന്ദേശം, Messages from the Pulpit"
         className="w-full rounded-xl block shadow-sm"
       />

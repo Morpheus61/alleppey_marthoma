@@ -81,7 +81,7 @@ export default function HomePulpitCard({ message }: { message: PulpitMessage }) 
             {/* Header image */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/pulpit_card.png"
+              src="/pulpit-banner.png"
               alt="The Pulpit"
               onClick={e => e.stopPropagation()}
               style={{

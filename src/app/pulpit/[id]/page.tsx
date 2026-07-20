@@ -34,7 +34,7 @@ export async function generateMetadata({
         data.scripture_ref ? `📖 ${data.scripture_ref}` : null,
         'St. George Marthoma Syrian Church, Alappuzha',
       ].filter(Boolean).join(' · ') ?? undefined,
-      images: ['/pulpit_card.png'],
+      images: ['/pulpit-banner.png'],
     },
   }
 }
