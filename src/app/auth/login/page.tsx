@@ -82,52 +82,18 @@ export default function LoginPage() {
     setLoading(true)
     setOtpChannel(channel)
 
+    // Pass channel directly to GoTrue — Supabase forwards it to Twilio Verify as
+    // Channel=whatsapp or Channel=sms. ONE OTP send, no double billing.
     // TRIAL: shouldCreateUser: true — open signup (revert to false on launch day)
     const { error: otpErr } = await supabase.auth.signInWithOtp({
       phone: e164,
-      options: { shouldCreateUser: true },
+      options: { shouldCreateUser: true, channel },
     })
 
     if (otpErr) {
-      const msg = otpErr.message ?? ''
-      // TRIAL: 'not registered' error can no longer occur (shouldCreateUser: true)
-      // Revert on launch day: restore the 'not found'/'not registered' check below
-      // if (msg.includes('not found') || msg.includes('not registered') || msg.includes('User not found')) {
-      //   setError('This number is not registered with the church. Please contact the secretary.')
-      //   setLoading(false)
-      //   return
-      // }
-      if (channel !== 'whatsapp') {
-        setError(msg)
-        setLoading(false)
-        return
-      }
-      // channel === 'whatsapp': SMS failed but user may be valid → fall through
-    }
-
-    // Step 2 — For WhatsApp: call Twilio Verify directly with Channel=whatsapp.
-    // If the SMS step above succeeded this cancels it and re-creates with WhatsApp.
-    // If the SMS step failed (fraud block etc.) this creates the verification fresh.
-    // GoTrue's verifyOtp still works — it calls Twilio Verify Check which finds
-    // the WhatsApp verification approved.
-    if (channel === 'whatsapp') {
-      try {
-        const res = await fetch('/api/otp/override', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: e164, channel: 'whatsapp' }),
-        })
-        if (!res.ok) {
-          const err = await res.json() as { error?: string }
-          setError(err.error ?? 'Could not send WhatsApp OTP. Please try SMS.')
-          setLoading(false)
-          return
-        }
-      } catch {
-        setError('Could not reach OTP service. Please try SMS.')
-        setLoading(false)
-        return
-      }
+      setError(otpErr.message ?? 'Could not send OTP. Please try again.')
+      setLoading(false)
+      return
     }
 
     setStep('otp')
