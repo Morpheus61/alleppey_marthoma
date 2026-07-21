@@ -107,17 +107,23 @@ export default async function AdminPage() {
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Member Families', value: totalMembers  ?? 0 },
-          { label: 'Pending Approval',value: pendingCount  ?? 0, warn: (pendingCount ?? 0) > 0 },
-          { label: 'Need Linking',    value: unlinkedCount ?? 0, warn: (unlinkedCount ?? 0) > 0 },
-          { label: 'Groups',          value: groupCount    ?? 0 },
-          { label: 'Events This Week',value: upcomingEvents?? 0 },
-        ].map(({ label, value, warn }) => (
-          <div key={label} className={`rounded-xl border p-4 text-center shadow-sm ${warn ? 'bg-amber-50 border-amber-300' : 'bg-white'}`}>
-            <p className="text-3xl font-bold text-brand-900">{value}</p>
-            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{label}</p>
-          </div>
-        ))}
+          { label: 'Member Families', value: totalMembers  ?? 0, href: null },
+          { label: 'Pending Approval',value: pendingCount  ?? 0, warn: (pendingCount ?? 0) > 0, href: null },
+          { label: 'Need Linking',    value: unlinkedCount ?? 0, warn: (unlinkedCount ?? 0) > 0, href: '/admin/users' },
+          { label: 'Groups',          value: groupCount    ?? 0, href: null },
+          { label: 'Events This Week',value: upcomingEvents?? 0, href: null },
+        ].map(({ label, value, warn, href }) => {
+          const inner = (
+            <>
+              <p className="text-3xl font-bold text-brand-900">{value}</p>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{label}</p>
+            </>
+          )
+          const cls = `rounded-xl border p-4 text-center shadow-sm ${warn ? 'bg-amber-50 border-amber-300' : 'bg-white'}`
+          return href
+            ? <a key={label} href={href} className={cls + ' hover:shadow-md transition-shadow block'}>{inner}</a>
+            : <div key={label} className={cls}>{inner}</div>
+        })}
       </div>
 
       {/* ── Claims Queue ── */}

@@ -75,9 +75,21 @@ export async function approveClaim(profileId: string): Promise<{ error: string }
 
   if (!claim) return { error: 'No pending claim found for this profile' }
 
+  // Fetch house_name from the registry so we can sync it onto the profile
+  let houseName: string | null = null
+  if (claim.family_member_id) {
+    const { data: fmRow } = await supabase
+      .from('family_members')
+      .select('family_units!family_id(house_name)')
+      .eq('id', claim.family_member_id)
+      .single()
+    const fu = (fmRow as unknown as { family_units: { house_name: string } | null } | null)?.family_units
+    houseName = fu?.house_name ?? null
+  }
+
   const { error } = await supabase
     .from('profiles')
-    .update({ claim_status: 'approved', status: 'active' })
+    .update({ claim_status: 'approved', status: 'active', ...(houseName ? { house_name: houseName } : {}) })
     .eq('id', profileId)
     .eq('claim_status', 'pending_claim')
 
