@@ -51,6 +51,12 @@ export default async function AdminPage() {
     supabase.from('family_members').select('id, family_id, full_name, full_name_ml, relation_to_head, is_deceased, profile_id'),
   ])
 
+  // Count unclaimed profiles that need to be linked by admin
+  const { count: unlinkedCount } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('claim_status', 'unclaimed')
+
   const pending      = (pendingRaw  as Profile[] | null) ?? []
   const claims       = (claimsRaw   as unknown[]) ?? []
   type FMFlat = { id: string; family_id: string; full_name: string; full_name_ml: string | null; relation_to_head: string | null; is_deceased: boolean; profile_id: string | null }
@@ -88,6 +94,7 @@ export default async function AdminPage() {
           { href: '/admin/approvals', label: '📝 Approvals',  desc: 'Change request queue' },
           { href: '/admin/finance',   label: '₹ Finance',    desc: 'Dashboard & verification' },
           { href: '/admin/roles',     label: '🛡 Roles',      desc: 'Grant / revoke staff roles' },
+          { href: '/admin/users',     label: '👥 App Users',   desc: 'Link signups to registry' },
         ].map(({ href, label, desc }) => (
           <a key={href} href={href}
             className="block rounded-xl border border-amber-100 bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
@@ -102,6 +109,7 @@ export default async function AdminPage() {
         {[
           { label: 'Member Families', value: totalMembers  ?? 0 },
           { label: 'Pending Approval',value: pendingCount  ?? 0, warn: (pendingCount ?? 0) > 0 },
+          { label: 'Need Linking',    value: unlinkedCount ?? 0, warn: (unlinkedCount ?? 0) > 0 },
           { label: 'Groups',          value: groupCount    ?? 0 },
           { label: 'Events This Week',value: upcomingEvents?? 0 },
         ].map(({ label, value, warn }) => (

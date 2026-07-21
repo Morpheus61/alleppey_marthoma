@@ -51,10 +51,10 @@ export async function createHouseholdWithProfile(formData: FormData): Promise<{ 
     .select('id').single()
   if (fmErr) return { error: fmErr.message }
 
-  // 4. Link the profile back
+  // 4. Link the profile back (same mutations as linkProfileToMember)
   await supabase
     .from('profiles')
-    .update({ family_member_id: fm.id, display_name: prof?.full_name, claim_status: 'approved' })
+    .update({ family_member_id: fm.id, display_name: prof?.full_name, claim_status: 'approved', status: 'active' })
     .eq('id', profileId)
 
   revalidatePath('/admin/registry')
@@ -94,7 +94,7 @@ export async function addFamilyMember(formData: FormData): Promise<{ error: stri
   if (profileId && fm?.id) {
     await supabase
       .from('profiles')
-      .update({ family_member_id: fm.id, claim_status: 'approved' })
+      .update({ family_member_id: fm.id, claim_status: 'approved', status: 'active' })
       .eq('id', profileId)
   }
 
@@ -231,10 +231,11 @@ export async function linkProfileToMember(memberId: string, profileId: string): 
   const { error } = await supabase.from('family_members').update({ profile_id: profileId }).eq('id', memberId)
   if (error) return { error: error.message }
 
-  // 2. Set profiles.family_member_id (bidirectional — required by finance page & RLS)
+  // 2. Set profiles.family_member_id + activate (bidirectional — required by finance page & RLS)
+  // This is the canonical single link path: both /admin/registry and /admin/users delegate here.
   await supabase
     .from('profiles')
-    .update({ family_member_id: memberId, claim_status: 'approved' })
+    .update({ family_member_id: memberId, claim_status: 'approved', status: 'active' })
     .eq('id', profileId)
 
   revalidatePath(`/admin/registry/${fm.family_id}`)

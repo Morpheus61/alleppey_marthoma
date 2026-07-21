@@ -80,8 +80,19 @@ where  lower(le.event_type) = lower(let.name)
 -- ─────────────────────────────────────────────────────────────
 
 -- ════════════════════════════════════════════════════════════════
--- STAGE B: Drop old columns — ONLY after Stage A verified
---          Uncomment and run as a separate SQL execution.
+-- STAGE B: Drop old columns — ONLY after ALL of the following are true:
+--   1. The trial period has ended.
+--   2. Every unclaimed profile has been reviewed in /admin/users.
+--   3. Every worthwhile profiles.family_members JSONB list has been imported
+--      into the registry via the admin-initiated linking flow.
+--   4. The /me page has been rewritten to edit family_members/family_units
+--      rows instead of profiles columns.
+--   5. Each verification query in the VERIFY block above returns 0.
+--
+-- DO NOT RUN during the trial. Trial users are unlinked by definition;
+-- full_name, address, date_of_birth, email, and family_members JSONB are the
+-- ONLY place their data lives. Dropping these columns before import destroys
+-- user data that cannot be recovered from the registry.
 -- ════════════════════════════════════════════════════════════════
 
 -- alter table public.profiles

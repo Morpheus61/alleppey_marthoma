@@ -82,18 +82,41 @@ export default function LoginPage() {
     setLoading(true)
     setOtpChannel(channel)
 
-    // Pass channel directly to GoTrue — Supabase forwards it to Twilio Verify as
-    // Channel=whatsapp or Channel=sms. ONE OTP send, no double billing.
+    // GoTrue always triggers Twilio Verify via SMS (it does not honour the channel
+    // option on hosted Supabase). We fix the channel below via /api/otp/override.
     // TRIAL: shouldCreateUser: true — open signup (revert to false on launch day)
     const { error: otpErr } = await supabase.auth.signInWithOtp({
       phone: e164,
-      options: { shouldCreateUser: true, channel },
+      options: { shouldCreateUser: true },
     })
 
     if (otpErr) {
       setError(otpErr.message ?? 'Could not send OTP. Please try again.')
       setLoading(false)
       return
+    }
+
+    // WhatsApp: override Twilio's channel (SMS → WhatsApp) via the override route.
+    // This cancels the pending SMS verification and issues a WhatsApp one instead.
+    // GoTrue's nonce stays valid — verifyOtp still works after the override.
+    if (channel === 'whatsapp') {
+      try {
+        const overrideRes = await fetch('/api/otp/override', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: e164, channel: 'whatsapp' }),
+        })
+        if (!overrideRes.ok) {
+          const json = await overrideRes.json() as { error?: string }
+          setError(json.error ?? 'Could not send WhatsApp OTP. Please try SMS instead.')
+          setLoading(false)
+          return
+        }
+      } catch {
+        setError('Could not reach OTP service. Please try SMS instead.')
+        setLoading(false)
+        return
+      }
     }
 
     setStep('otp')
