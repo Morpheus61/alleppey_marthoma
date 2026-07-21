@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Home, X, ChevronRight, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { adminLinkToExistingMember, adminCreateHouseholdAndLink, adminImportFamilyMembers } from './actions'
@@ -52,7 +52,7 @@ export default function LinkModal({
   onClose: () => void
 }) {
   const [step, setStep]                     = useState<Step>('search')
-  const [query, setQuery]                   = useState('')
+  const [query, setQuery]                   = useState(profile.house_name ?? '')
   const [searchResults, setSearchResults]   = useState<Household[]>([])
   const [searching, setSearching]           = useState(false)
   const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null)
@@ -62,9 +62,18 @@ export default function LinkModal({
   const [saving, setSaving]                 = useState(false)
   const [error, setError]                   = useState<string | null>(null)
   const [skipped, setSkipped]               = useState<string[]>([])
+  const [prefillHouseName, setPrefillHouseName] = useState<string | null>(null)
 
   // POST-016: prefer display_name; fall back to full_name while legacy columns exist
   const displayName = profile.display_name ?? profile.full_name
+
+  // Auto-search with the profile's house_name when the modal opens
+  useEffect(() => {
+    if (profile.house_name && profile.house_name.trim().length >= 2) {
+      handleSearch(profile.house_name.trim())
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Step handlers ──────────────────────────────────────────────────────
 
@@ -191,7 +200,9 @@ export default function LinkModal({
           {step === 'search' && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Search for the household to link this account to.
+                {profile.house_name
+                  ? <>Showing results for <span className="font-semibold text-brand-900">{profile.house_name}</span> from their profile. Select a match or create a new household.</>  
+                  : 'Search for the household to link this account to.'}
               </p>
               <div className="relative">
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -220,7 +231,15 @@ export default function LinkModal({
                 ))}
               </div>
               {query.length >= 2 && !searching && searchResults.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-3">No households found.</p>
+                <div className="text-center py-3 space-y-3">
+                  <p className="text-sm text-muted-foreground">No households found.</p>
+                  <button
+                    onClick={() => { setPrefillHouseName(query.trim()); setStep('create-household') }}
+                    className={btn + ' bg-brand-900 text-white hover:bg-brand-800 w-full'}
+                  >
+                    + Create new household &ldquo;{query.trim()}&rdquo;
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -326,7 +345,7 @@ export default function LinkModal({
                 <input
                   name="house_name"
                   required
-                  defaultValue={profile.house_name ?? ''}
+                  defaultValue={prefillHouseName ?? profile.house_name ?? ''}
                   className={inp}
                   placeholder="e.g. Pandampurath"
                 />
@@ -365,7 +384,7 @@ export default function LinkModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStep('pick-action')}
+                  onClick={() => { setPrefillHouseName(null); setStep(selectedHousehold ? 'pick-action' : 'search') }}
                   className={btn + ' bg-gray-100 text-gray-700 hover:bg-gray-200'}
                 >
                   Back
