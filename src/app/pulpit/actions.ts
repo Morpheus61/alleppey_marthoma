@@ -8,16 +8,15 @@ async function requireAdmin() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const [{ data: profile }, { data: roleRow }] = await Promise.all([
-    supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
-    supabase.from('parish_roles').select('id')
-      .eq('profile_id', user.id)
-      .eq('role', 'super_admin')
-      .is('revoked_at', null)
-      .maybeSingle(),
-  ])
+  const { data: roleRow } = await supabase
+    .from('parish_roles')
+    .select('id')
+    .eq('profile_id', user.id)
+    .eq('role', 'super_admin')
+    .is('revoked_at', null)
+    .maybeSingle()
 
-  if (!profile?.is_admin && !roleRow) redirect('/pulpit')
+  if (!roleRow) redirect('/pulpit')
   return { supabase, userId: user.id }
 }
 

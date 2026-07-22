@@ -26,18 +26,19 @@ export default async function PulpitPage({
   const { data: { user } } = await supabase.auth.getUser()
   const isAuthenticated = !!user
 
-  // Compose / drafts access: super_admin only (not regular admin)
+  // Compose / drafts access: super_admin parish role ONLY
+  // profiles.is_admin is the general parish admin flag — it does NOT grant pulpit access.
+  // Only a parish_roles row with role='super_admin' (assigned to the Vicar) unlocks compose.
   let isAdmin = false
   if (user) {
-    const [{ data: profile }, { data: roleRow }] = await Promise.all([
-      supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
-      supabase.from('parish_roles').select('id')
-        .eq('profile_id', user.id)
-        .eq('role', 'super_admin')
-        .is('revoked_at', null)
-        .maybeSingle(),
-    ])
-    isAdmin = !!(profile?.is_admin || roleRow)
+    const { data: roleRow } = await supabase
+      .from('parish_roles')
+      .select('id')
+      .eq('profile_id', user.id)
+      .eq('role', 'super_admin')
+      .is('revoked_at', null)
+      .maybeSingle()
+    isAdmin = !!roleRow
   }
 
   const params = await searchParams
