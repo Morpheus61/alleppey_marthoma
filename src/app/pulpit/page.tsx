@@ -26,14 +26,14 @@ export default async function PulpitPage({
   const { data: { user } } = await supabase.auth.getUser()
   const isAuthenticated = !!user
 
-  // Determine admin status (drafts tab + New Message button)
+  // Compose / drafts access: super_admin only (not regular admin)
   let isAdmin = false
   if (user) {
     const [{ data: profile }, { data: roleRow }] = await Promise.all([
       supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
       supabase.from('parish_roles').select('id')
         .eq('profile_id', user.id)
-        .in('role', ['admin', 'super_admin'])
+        .eq('role', 'super_admin')
         .is('revoked_at', null)
         .maybeSingle(),
     ])

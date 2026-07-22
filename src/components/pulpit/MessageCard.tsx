@@ -72,6 +72,8 @@ export default function MessageCard({ message, isAuthenticated = true }: Props) 
           messageId={message.id}
           title={message.title}
           scriptureRef={message.scripture_ref}
+          authorName={(message.author as { full_name: string } | null | undefined)?.full_name}
+          dateStr={dateStr}
         />
         <Link
           href={`/pulpit/${message.id}`}

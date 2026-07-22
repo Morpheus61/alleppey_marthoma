@@ -148,6 +148,8 @@ export default async function PulpitMessagePage({
           messageId={message.id}
           title={message.title}
           scriptureRef={message.scripture_ref}
+          authorName={(message.author as { full_name: string } | null | undefined)?.full_name}
+          dateStr={dateStr}
         />
       </div>
 

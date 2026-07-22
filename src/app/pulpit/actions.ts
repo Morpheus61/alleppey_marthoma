@@ -12,7 +12,7 @@ async function requireAdmin() {
     supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
     supabase.from('parish_roles').select('id')
       .eq('profile_id', user.id)
-      .in('role', ['admin', 'super_admin'])
+      .eq('role', 'super_admin')
       .is('revoked_at', null)
       .maybeSingle(),
   ])

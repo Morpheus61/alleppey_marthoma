@@ -4,15 +4,19 @@ interface Props {
   messageId: string
   title: string | null
   scriptureRef: string | null
+  authorName?: string | null
+  dateStr?: string | null
 }
 
-export default function ShareButton({ messageId, title, scriptureRef }: Props) {
+export default function ShareButton({ messageId, title, scriptureRef, authorName, dateStr }: Props) {
   async function handleShare() {
-    const url = `${window.location.origin}/pulpit/${messageId}`
+    const url = window.location.origin + '/pulpit/' + messageId
     const shareTitle = title || 'Message from the Vicar'
     const text = [
       '🕊️ ' + shareTitle,
-      scriptureRef ? `📖 ${scriptureRef}` : null,
+      scriptureRef ? '📖 ' + scriptureRef : null,
+      authorName ? '— ' + authorName : null,
+      dateStr ? dateStr : null,
       'St. George Marthoma Syrian Church, Alappuzha',
     ].filter(Boolean).join('\n')
 
