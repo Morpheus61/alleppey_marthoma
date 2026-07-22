@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { UserPlus, CheckCircle, AlertCircle } from 'lucide-react'
+import { UserPlus, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { addMember } from '@/app/(app)/directory/actions'
 
 const inp =
@@ -15,6 +15,7 @@ async function transliterate(text: string): Promise<string> {
 }
 
 export default function AddMemberForm() {
+  const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
@@ -50,14 +51,24 @@ export default function AddMemberForm() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-amber-100 shadow-sm p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <UserPlus size={20} className="text-brand-900" />
-        <h2 className="text-base font-bold text-brand-900">Add Single Member</h2>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Enter the member&apos;s details manually. They will be auto-activated when they first sign in with this mobile number.
-      </p>
+    <div className="bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between gap-2 px-5 py-4 hover:bg-amber-50/60 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <UserPlus size={20} className="text-brand-900" />
+          <h2 className="text-base font-bold text-brand-900">Add Single Member</h2>
+        </div>
+        {open ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-amber-50 px-5 pb-5 pt-4 space-y-4">
+        <p className="text-xs text-muted-foreground">
+          Enter the member&apos;s details manually. They will be auto-activated when they first sign in with this mobile number.
+        </p>
 
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
@@ -152,6 +163,8 @@ export default function AddMemberForm() {
           {status === 'saving' ? 'Adding…' : 'Add Member'}
         </button>
       </form>
+        </div>
+      )}
     </div>
   )
 }
