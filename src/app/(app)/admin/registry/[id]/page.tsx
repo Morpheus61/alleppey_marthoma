@@ -30,21 +30,25 @@ export default async function HouseholdDetailPage({ params }: Props) {
     .order('relation_to_head')
 
   // All active profiles
+  // Only show profiles that specifically claimed to be a member of THIS household
+  // (profiles.family_member_id points to one of this family's member rows)
+  // but that family_member row doesn't have profile_id set yet.
+  const unlinkedMemberIds = (members ?? []).filter(m => !m.profile_id).map(m => m.id)
+  const { data: unlinkedProfilesRaw } = unlinkedMemberIds.length > 0
+    ? await supabase
+        .from('profiles')
+        .select('id, full_name, phone')
+        .in('family_member_id', unlinkedMemberIds)
+        .eq('status', 'active')
+    : { data: [] as { id: string; full_name: string | null; phone: string | null }[] }
+  const unlinkedProfiles = unlinkedProfilesRaw ?? []
+
+  // All active profiles (for the Link account dropdown)
   const { data: allProfiles } = await supabase
     .from('profiles')
     .select('id, full_name, phone')
     .eq('status', 'active')
     .order('full_name')
-
-  // Profiles already linked anywhere in the registry
-  const { data: allLinkedRaw } = await supabase
-    .from('family_members')
-    .select('profile_id')
-    .not('profile_id', 'is', null)
-  const allLinkedIds = new Set((allLinkedRaw ?? []).map(m => m.profile_id as string))
-
-  // Unlinked = registered but not yet in any household
-  const unlinkedProfiles = (allProfiles ?? []).filter(p => !allLinkedIds.has(p.id))
 
   // All non-archived groups for enrolment
   const { data: allGroups } = await supabase
