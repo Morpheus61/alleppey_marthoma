@@ -4,56 +4,57 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { CrossSpinner } from '@/components/ui/LoadingIndicator'
+import { Eye, EyeOff } from 'lucide-react'
 
-// ── Country list: Marthoma diaspora focus ──────────────────────────────────
 type Country = { code: string; dial: string; flag: string; name: string; pattern: RegExp }
 
 const COUNTRIES: Country[] = [
-  { code: 'IN', dial: '+91',  flag: '🇮🇳', name: 'India',          pattern: /^\d{10}$/ },
-  { code: 'AE', dial: '+971', flag: '🇦🇪', name: 'UAE',            pattern: /^\d{9}$/ },
-  { code: 'US', dial: '+1',   flag: '🇺🇸', name: 'USA / Canada',   pattern: /^\d{10}$/ },
-  { code: 'GB', dial: '+44',  flag: '🇬🇧', name: 'UK',             pattern: /^\d{10}$/ },
-  { code: 'AU', dial: '+61',  flag: '🇦🇺', name: 'Australia',      pattern: /^\d{9}$/ },
-  { code: 'MY', dial: '+60',  flag: '🇲🇾', name: 'Malaysia',       pattern: /^\d{9,10}$/ },
-  { code: 'SG', dial: '+65',  flag: '🇸🇬', name: 'Singapore',      pattern: /^\d{8}$/ },
-  { code: 'QA', dial: '+974', flag: '🇶🇦', name: 'Qatar',          pattern: /^\d{8}$/ },
-  { code: 'KW', dial: '+965', flag: '🇰🇼', name: 'Kuwait',         pattern: /^\d{8}$/ },
-  { code: 'BH', dial: '+973', flag: '🇧🇭', name: 'Bahrain',        pattern: /^\d{8}$/ },
-  { code: 'OM', dial: '+968', flag: '🇴🇲', name: 'Oman',           pattern: /^\d{8}$/ },
-  { code: 'SA', dial: '+966', flag: '🇸🇦', name: 'Saudi Arabia',   pattern: /^\d{9}$/ },
-  { code: 'DE', dial: '+49',  flag: '🇩🇪', name: 'Germany',        pattern: /^\d{10,11}$/ },
-  { code: 'NZ', dial: '+64',  flag: '🇳🇿', name: 'New Zealand',    pattern: /^\d{9}$/ },
+  { code: 'IN', dial: '+91',  flag: '🇮🇳', name: 'India',        pattern: /^\d{10}$/ },
+  { code: 'AE', dial: '+971', flag: '🇦🇪', name: 'UAE',          pattern: /^\d{9}$/ },
+  { code: 'US', dial: '+1',   flag: '🇺🇸', name: 'USA / Canada', pattern: /^\d{10}$/ },
+  { code: 'GB', dial: '+44',  flag: '🇬🇧', name: 'UK',           pattern: /^\d{10}$/ },
+  { code: 'AU', dial: '+61',  flag: '🇦🇺', name: 'Australia',    pattern: /^\d{9}$/ },
+  { code: 'MY', dial: '+60',  flag: '🇲🇾', name: 'Malaysia',     pattern: /^\d{9,10}$/ },
+  { code: 'SG', dial: '+65',  flag: '🇸🇬', name: 'Singapore',    pattern: /^\d{8}$/ },
+  { code: 'QA', dial: '+974', flag: '🇶🇦', name: 'Qatar',        pattern: /^\d{8}$/ },
+  { code: 'KW', dial: '+965', flag: '🇰🇼', name: 'Kuwait',       pattern: /^\d{8}$/ },
+  { code: 'BH', dial: '+973', flag: '🇧🇭', name: 'Bahrain',      pattern: /^\d{8}$/ },
+  { code: 'OM', dial: '+968', flag: '🇴🇲', name: 'Oman',         pattern: /^\d{8}$/ },
+  { code: 'SA', dial: '+966', flag: '🇸🇦', name: 'Saudi Arabia', pattern: /^\d{9}$/ },
+  { code: 'DE', dial: '+49',  flag: '🇩🇪', name: 'Germany',      pattern: /^\d{10,11}$/ },
+  { code: 'NZ', dial: '+64',  flag: '🇳🇿', name: 'New Zealand',  pattern: /^\d{9}$/ },
 ]
 
-type Step    = 'phone' | 'otp'
-type Channel = 'whatsapp' | 'sms'
+type Step = 'phone' | 'otp' | 'set-password' | 'password'
 
 export default function LoginPage() {
-  const router  = useRouter()
-  const supabase = createClient()
+  const router    = useRouter()
+  const supabase  = createClient()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const [country,           setCountry]           = useState<Country>(COUNTRIES[0])
-  const [phoneInput,        setPhoneInput]         = useState('')
-  const [step,              setStep]               = useState<Step>('phone')
-  const [otp,               setOtp]                = useState('')
-  const [loading,           setLoading]            = useState(false)
-  const [error,             setError]              = useState<string | null>(null)
-  const [otpChannel,        setOtpChannel]         = useState<Channel>('whatsapp')
-  const [showPicker,        setShowPicker]         = useState(false)
-  const [pickerSearch,      setPickerSearch]       = useState('')
+  const [country,      setCountry]     = useState<Country>(COUNTRIES[0])
+  const [phoneInput,   setPhoneInput]  = useState('')
+  const [step,         setStep]        = useState<Step>('phone')
+  const [otp,          setOtp]         = useState('')
+  const [password,     setPassword]    = useState('')
+  const [confirmPw,    setConfirmPw]   = useState('')
+  const [showPw,       setShowPw]      = useState(false)
+  const [loading,      setLoading]     = useState(false)
+  const [error,        setError]       = useState<string | null>(null)
+  const [isReset,      setIsReset]     = useState(false)
+  const [showPicker,   setShowPicker]  = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
 
-  const isIndia      = country.code === 'IN'
-  const nationalNum  = phoneInput.replace(/\D/g, '')
-  const e164         = `${country.dial}${nationalNum}`
-  const isValidNum   = country.pattern.test(nationalNum)
+  const nationalNum = phoneInput.replace(/\D/g, '')
+  const e164        = country.dial + nationalNum
+  const isValidNum  = country.pattern.test(nationalNum)
 
   const filteredCountries = COUNTRIES.filter(c =>
     c.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
     c.dial.includes(pickerSearch)
   )
 
-  // Auto-redirect when a valid session already exists
+  // Auto-redirect if session exists
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.replace('/')
@@ -61,7 +62,7 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Close dropdown on outside click
+  // Close country picker on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -72,89 +73,139 @@ export default function LoginPage() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  // ── Send OTP ────────────────────────────────────────────────────────────
-  async function sendOtp(channel: Channel) {
-    if (!isValidNum) {
-      setError(`Please enter a valid ${country.name} mobile number`)
-      return
-    }
+  // ── Step 1: Check phone → route to OTP (new) or Password (returning) ────────
+  async function handlePhoneContinue() {
+    if (!isValidNum) { setError('Please enter a valid mobile number'); return }
     setError(null)
     setLoading(true)
-    setOtpChannel(channel)
+    try {
+      const { data, error: rpcErr } = await supabase.rpc('phone_auth_mode', { p_phone: nationalNum })
+      if (rpcErr) throw rpcErr
+      if (data === 'password') {
+        setStep('password')
+        setLoading(false)
+      } else {
+        await sendOtp()
+      }
+    } catch {
+      setError('Could not reach the server. Please try again.')
+      setLoading(false)
+    }
+  }
 
-    // GoTrue always triggers Twilio Verify via SMS (it does not honour the channel
-    // option on hosted Supabase). We fix the channel below via /api/otp/override.
-    // TRIAL: shouldCreateUser: true — open signup (revert to false on launch day)
+  // ── Send OTP via SMS ──────────────────────────────────────────────────────
+  async function sendOtp() {
+    setLoading(true)
+    setError(null)
     const { error: otpErr } = await supabase.auth.signInWithOtp({
       phone: e164,
       options: { shouldCreateUser: true },
     })
-
     if (otpErr) {
       setError(otpErr.message ?? 'Could not send OTP. Please try again.')
       setLoading(false)
       return
     }
-
-    // WhatsApp: override Twilio's channel (SMS → WhatsApp) via the override route.
-    // This cancels the pending SMS verification and issues a WhatsApp one instead.
-    // GoTrue's nonce stays valid — verifyOtp still works after the override.
-    if (channel === 'whatsapp') {
-      try {
-        const overrideRes = await fetch('/api/otp/override', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: e164, channel: 'whatsapp' }),
-        })
-        if (!overrideRes.ok) {
-          const json = await overrideRes.json() as { error?: string }
-          setError(json.error ?? 'Could not send WhatsApp OTP. Please try SMS instead.')
-          setLoading(false)
-          return
-        }
-      } catch {
-        setError('Could not reach OTP service. Please try SMS instead.')
-        setLoading(false)
-        return
-      }
-    }
-
     setStep('otp')
     setLoading(false)
   }
 
-  // ── Verify OTP ──────────────────────────────────────────────────────────
+  // ── Verify OTP → set-password ────────────────────────────────────────────
   async function verifyOtp() {
     if (otp.length !== 6) { setError('Please enter the 6-digit code'); return }
     setError(null)
     setLoading(true)
-
     const { data, error: verifyErr } = await supabase.auth.verifyOtp({
       phone: e164,
       token: otp,
-      type: 'sms', // always 'sms' type regardless of delivery channel
+      type: 'sms',
     })
-
     if (verifyErr) {
       setError('Invalid or expired code. Please try again.')
-    } else if (data?.user) {
-      router.push('/')
-      router.refresh()
+      setLoading(false)
+      return
     }
+    if (data?.user) setStep('set-password')
     setLoading(false)
   }
 
-  // ── Shared input style ──────────────────────────────────────────────────
-  const inputCls = 'w-full rounded-lg border border-amber-100 bg-amber-50/50 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-900 focus:bg-white min-h-[44px] transition-colors'
+  // ── Set / reset password ──────────────────────────────────────────────────
+  async function handleSetPassword() {
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return }
+    if (password !== confirmPw) { setError('Passwords do not match'); return }
+    setError(null)
+    setLoading(true)
+    const { error: pwErr } = await supabase.auth.updateUser({ password })
+    if (pwErr) {
+      setError(pwErr.message ?? 'Could not set password.')
+      setLoading(false)
+      return
+    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('profiles').update({ has_password: true }).eq('id', user.id)
+    }
+    router.push('/')
+    router.refresh()
+    setLoading(false)
+  }
+
+  // ── Password login ────────────────────────────────────────────────────────
+  async function handlePasswordLogin() {
+    if (!password) { setError('Please enter your password'); return }
+    setError(null)
+    setLoading(true)
+    const { error: loginErr } = await supabase.auth.signInWithPassword({
+      phone: e164,
+      password,
+    })
+    if (loginErr) {
+      setError('Incorrect password. Tap “Forgot password?” below to reset via SMS.')
+      setLoading(false)
+      return
+    }
+    router.push('/')
+    router.refresh()
+    setLoading(false)
+  }
+
+  // ── Forgot password: send OTP then re-set ─────────────────────────────────
+  async function handleForgotPassword() {
+    setIsReset(true)
+    setPassword('')
+    setConfirmPw('')
+    setOtp('')
+    setError(null)
+    setLoading(true)
+    const { error: otpErr } = await supabase.auth.signInWithOtp({
+      phone: e164,
+      options: { shouldCreateUser: false },
+    })
+    if (otpErr) {
+      setError(otpErr.message ?? 'Could not send reset code.')
+      setIsReset(false)
+      setLoading(false)
+      return
+    }
+    setStep('otp')
+    setLoading(false)
+  }
+
+  const inp = 'w-full rounded-lg border border-amber-100 bg-amber-50/50 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-900 focus:bg-white min-h-[44px] transition-colors'
+
+  const stepLabel: Record<Step, string> = {
+    phone:            'Sign in to your account',
+    otp:              'Enter verification code',
+    'set-password':   isReset ? 'Create a new password' : 'Create your password',
+    password:         'Welcome back',
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f9f0e3] px-4 py-10">
-
-      {/* ── Card ── */}
       <div className="w-full max-w-sm">
         <div className="rounded-2xl shadow-2xl overflow-hidden border border-amber-100">
 
-          {/* ── Header: cream / ivory ── */}
+          {/* ── Church header ── */}
           <div className="bg-[#fdf6eb] px-6 pt-8 pb-6 flex flex-col items-center gap-3 border-b border-amber-100">
             <div
               role="img"
@@ -183,28 +234,24 @@ export default function LoginPage() {
               </div>
             </div>
             <p className="text-amber-600/60 text-[0.65rem] italic tracking-widest">
-              ✦&nbsp;Lighted to Lighten&nbsp;✦
+              ✶ Lighted to Lighten ✶
             </p>
           </div>
 
           {/* ── Form area ── */}
           <div className="bg-white px-6 pt-6 pb-7">
             <p className="text-center text-[0.65rem] font-semibold tracking-[0.18em] uppercase text-gray-400 mb-5">
-              {step === 'phone' ? 'Sign in to your account' : 'Enter verification code'}
+              {stepLabel[step]}
             </p>
 
             {/* ══════════════ PHONE STEP ══════════════ */}
             {step === 'phone' && (
               <div className="space-y-3">
-
-                {/* Country + number row */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1">
-                    Mobile Number
-                  </label>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Mobile Number</label>
                   <div className="flex gap-2" ref={dropdownRef}>
 
-                    {/* Country code button */}
+                    {/* Country picker */}
                     <div className="relative">
                       <button
                         type="button"
@@ -218,7 +265,6 @@ export default function LoginPage() {
                         <span className="text-gray-400 text-[10px]">▾</span>
                       </button>
 
-                      {/* Dropdown */}
                       {showPicker && (
                         <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-amber-100 rounded-xl shadow-xl w-64 max-h-60 flex flex-col overflow-hidden">
                           <div className="p-2 border-b border-amber-50 sticky top-0 bg-white">
@@ -244,7 +290,7 @@ export default function LoginPage() {
                                   setPhoneInput('')
                                   setError(null)
                                 }}
-                                className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer text-sm hover:bg-amber-50 transition-colors ${c.code === country.code ? 'bg-amber-50 font-semibold' : ''}`}
+                                className={'flex items-center gap-2.5 px-3 py-2.5 cursor-pointer text-sm hover:bg-amber-50 transition-colors' + (c.code === country.code ? ' bg-amber-50 font-semibold' : '')}
                               >
                                 <span className="text-base">{c.flag}</span>
                                 <span className="flex-1 text-gray-800">{c.name}</span>
@@ -263,58 +309,26 @@ export default function LoginPage() {
                       autoComplete="tel-national"
                       value={phoneInput}
                       onChange={e => setPhoneInput(e.target.value.replace(/[^\d\s]/g, ''))}
-                      placeholder={isIndia ? '98765 43210' : 'Mobile number'}
-                      className={`flex-1 ${inputCls}`}
+                      placeholder={country.code === 'IN' ? '98765 43210' : 'Mobile number'}
+                      className={'flex-1 ' + inp}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {isIndia
-                      ? 'Enter your 10-digit Indian mobile number'
-                      : `Enter your ${country.name} mobile number — OTP sent via WhatsApp`}
+                    Enter your mobile number to continue
                   </p>
                 </div>
 
                 {error && <p className="text-sm text-destructive">{error}</p>}
 
-                {/* ── India: WhatsApp (primary) + SMS (secondary) ── */}
-                {isIndia ? (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => sendOtp('whatsapp')}
-                      disabled={loading || !isValidNum}
-                      className="w-full rounded-lg bg-[#25D366] hover:bg-[#1ebe5d] disabled:opacity-50 text-white font-semibold py-3 min-h-[44px] transition-colors shadow flex items-center justify-center gap-2"
-                    >
-                      {loading && otpChannel === 'whatsapp' ? <CrossSpinner size={16} /> : null}
-                      {loading && otpChannel === 'whatsapp' ? 'Sending…' : '💬 Send OTP via WhatsApp'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => sendOtp('sms')}
-                      disabled={loading || !isValidNum}
-                      className="w-full rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500 text-sm font-medium py-2.5 min-h-[44px] transition-colors flex items-center justify-center gap-2"
-                    >
-                      {loading && otpChannel === 'sms' ? <CrossSpinner size={14} /> : null}
-                      {loading && otpChannel === 'sms' ? 'Sending…' : '📱 Send via SMS instead'}
-                    </button>
-                  </div>
-                ) : (
-                  /* ── International: WhatsApp only ── */
-                  <div className="space-y-1.5">
-                    <button
-                      type="button"
-                      onClick={() => sendOtp('whatsapp')}
-                      disabled={loading || !isValidNum}
-                      className="w-full rounded-lg bg-[#25D366] hover:bg-[#1ebe5d] disabled:opacity-50 text-white font-semibold py-3 min-h-[44px] transition-colors shadow flex items-center justify-center gap-2"
-                    >
-                      {loading ? <CrossSpinner size={16} /> : null}
-                      {loading ? 'Sending…' : '💬 Send OTP via WhatsApp'}
-                    </button>
-                    <p className="text-[11px] text-center text-muted-foreground">
-                      International members receive OTP via WhatsApp only
-                    </p>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={handlePhoneContinue}
+                  disabled={loading || !isValidNum}
+                  className="w-full rounded-lg bg-brand-900 text-white font-semibold py-3 min-h-[44px] hover:bg-brand-800 disabled:opacity-50 transition-colors shadow flex items-center justify-center gap-2"
+                >
+                  {loading && <CrossSpinner size={16} />}
+                  {loading ? 'Checking…' : 'Continue'}
+                </button>
               </div>
             )}
 
@@ -322,10 +336,7 @@ export default function LoginPage() {
             {step === 'otp' && (
               <div className="space-y-4">
                 <p className="text-sm text-center text-muted-foreground">
-                  {otpChannel === 'whatsapp'
-                    ? `✓ Code sent to your WhatsApp`
-                    : `✓ Code sent via SMS`}
-                  <br />
+                  {isReset ? 'Reset code sent via SMS to' : 'Verification code sent via SMS to'}<br />
                   <span className="font-medium text-gray-700">{e164}</span>
                 </p>
 
@@ -350,53 +361,140 @@ export default function LoginPage() {
                   className="w-full rounded-lg bg-brand-900 text-white font-semibold py-3 min-h-[44px] hover:bg-brand-800 disabled:opacity-50 transition-colors shadow flex items-center justify-center gap-2"
                 >
                   {loading && <CrossSpinner size={16} />}
-                  {loading ? 'Verifying…' : 'Verify & Sign In'}
+                  {loading ? 'Verifying…' : 'Verify Code'}
                 </button>
 
-                {/* Resend / change options */}
                 <div className="flex flex-col items-center gap-1.5 pt-1">
                   <p className="text-[11px] text-muted-foreground">Didn&apos;t receive it?</p>
-
-                  {/* Indian WhatsApp user can switch to SMS */}
-                  {otpChannel === 'whatsapp' && isIndia && (
-                    <button
-                      type="button"
-                      onClick={() => { setStep('phone'); sendOtp('sms') }}
-                      disabled={loading}
-                      className="text-xs text-brand-900 underline underline-offset-2 hover:no-underline disabled:opacity-50"
-                    >
-                      Send via SMS instead
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => sendOtp(otpChannel)}
-                    disabled={loading}
-                    className="text-xs text-brand-900 underline underline-offset-2 hover:no-underline disabled:opacity-50"
-                  >
-                    Resend {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} code
+                  <button type="button" onClick={sendOtp} disabled={loading}
+                    className="text-xs text-brand-900 underline underline-offset-2 hover:no-underline disabled:opacity-50">
+                    Resend SMS code
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => { setStep('phone'); setOtp(''); setError(null) }}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <button type="button"
+                    onClick={() => { setStep('phone'); setOtp(''); setError(null); setIsReset(false) }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                     Change number
                   </button>
                 </div>
               </div>
             )}
+
+            {/* ══════════════ SET PASSWORD STEP ══════════════ */}
+            {step === 'set-password' && (
+              <div className="space-y-3">
+                <p className="text-sm text-center text-muted-foreground">
+                  {isReset
+                    ? 'Set a new password for your account'
+                    : "Set a password — you'll use this to log in next time"}
+                </p>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Min 8 characters"
+                      className={inp + ' pr-10'}
+                      autoFocus
+                    />
+                    <button type="button" onClick={() => setShowPw(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Confirm Password</label>
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    value={confirmPw}
+                    onChange={e => setConfirmPw(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSetPassword() }}
+                    placeholder="Repeat password"
+                    className={inp}
+                  />
+                </div>
+
+                {password.length > 0 && password.length < 8 && (
+                  <p className="text-xs text-amber-600">At least 8 characters required</p>
+                )}
+                {error && <p className="text-sm text-destructive">{error}</p>}
+
+                <button
+                  type="button"
+                  onClick={handleSetPassword}
+                  disabled={loading || password.length < 8 || password !== confirmPw}
+                  className="w-full rounded-lg bg-brand-900 text-white font-semibold py-3 min-h-[44px] hover:bg-brand-800 disabled:opacity-50 transition-colors shadow flex items-center justify-center gap-2"
+                >
+                  {loading && <CrossSpinner size={16} />}
+                  {loading ? 'Saving…' : isReset ? 'Reset Password' : 'Save & Enter'}
+                </button>
+              </div>
+            )}
+
+            {/* ══════════════ PASSWORD STEP ══════════════ */}
+            {step === 'password' && (
+              <div className="space-y-3">
+                <p className="text-sm text-center text-muted-foreground">
+                  Signing in as<br />
+                  <span className="font-medium text-gray-700">{e164}</span>
+                </p>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handlePasswordLogin() }}
+                      placeholder="Enter your password"
+                      className={inp + ' pr-10'}
+                      autoFocus
+                    />
+                    <button type="button" onClick={() => setShowPw(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && <p className="text-sm text-destructive">{error}</p>}
+
+                <button
+                  type="button"
+                  onClick={handlePasswordLogin}
+                  disabled={loading || !password}
+                  className="w-full rounded-lg bg-brand-900 text-white font-semibold py-3 min-h-[44px] hover:bg-brand-800 disabled:opacity-50 transition-colors shadow flex items-center justify-center gap-2"
+                >
+                  {loading && <CrossSpinner size={16} />}
+                  {loading ? 'Signing in…' : 'Sign In'}
+                </button>
+
+                <div className="flex flex-col items-center gap-2 pt-1">
+                  <button type="button" onClick={handleForgotPassword} disabled={loading}
+                    className="text-xs text-brand-900 underline underline-offset-2 hover:no-underline disabled:opacity-50">
+                    Forgot password? Reset via SMS OTP
+                  </button>
+                  <button type="button"
+                    onClick={() => { setStep('phone'); setPassword(''); setError(null) }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    Change number
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 
         <p className="text-center text-[0.6rem] text-amber-900/40 mt-5 tracking-wide">
-          © {new Date().getFullYear()} St. George Marthoma Syrian Church, Alappuzha
+          {'© '}{new Date().getFullYear()}{' St. George Marthoma Syrian Church, Alappuzha'}
         </p>
       </div>
     </div>
   )
 }
-
-
