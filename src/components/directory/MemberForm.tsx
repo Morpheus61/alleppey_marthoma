@@ -18,7 +18,7 @@ const field = 'w-full rounded-xl border border-amber-100 bg-white px-4 py-3 text
 const label = 'block text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1'
 const section = 'space-y-4'
 
-const RELATIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandchild', 'Other']
+const RELATIONS = ['Spouse', 'Son', 'Daughter', 'Daughter-in-Law', 'Father', 'Mother', 'Brother', 'Sister', 'Grandchild', 'Other']
 
 async function transliterate(text: string): Promise<string> {
   if (!text.trim()) return ''
@@ -388,7 +388,7 @@ function FamilyMemberRow({
             className={field}
           >
             <option value="">Select…</option>
-            {['Spouse','Son','Daughter','Father','Mother','Brother','Sister','Grandchild','Other'].map(r => (
+            {['Spouse','Son','Daughter','Daughter-in-Law','Father','Mother','Brother','Sister','Grandchild','Other'].map(r => (
               <option key={r} value={r}>{r}</option>
             ))}
           </select>

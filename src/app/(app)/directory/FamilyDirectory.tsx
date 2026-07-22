@@ -29,8 +29,9 @@ export interface FamilyEntry {
 
 const RELATION_ORDER: Record<string, number> = {
   head: 1, spouse: 2, son: 3, daughter: 4,
-  father: 5, mother: 6, brother: 7, sister: 8,
-  grandchild: 9, other: 10,
+  'daughter-in-law': 5,
+  father: 6, mother: 7, brother: 8, sister: 9,
+  grandchild: 10, other: 11,
 }
 
 function fmtDate(s: string | null): string | null {

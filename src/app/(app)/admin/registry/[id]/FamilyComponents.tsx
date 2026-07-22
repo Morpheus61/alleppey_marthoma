@@ -11,7 +11,7 @@ async function transliterate(text: string): Promise<string> {
 
 const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white placeholder:text-gray-400'
 
-const RELATIONS = ['head','spouse','son','daughter','father','mother','brother','sister','grandchild','other']
+const RELATIONS = ['head','spouse','son','daughter','daughter-in-law','father','mother','brother','sister','grandchild','other']
 
 interface Profile { id: string; full_name: string; phone: string }
 interface FamilyMember { id: string; full_name: string; full_name_ml: string | null; relation_to_head: string | null; date_of_birth: string | null; gender: string | null; is_deceased: boolean; profile_id: string | null }

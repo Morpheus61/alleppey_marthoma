@@ -15,7 +15,7 @@ export interface FamilyMemberRow {
   is_deceased: boolean
 }
 
-const RELATIONS = ['head','spouse','son','daughter','father','mother','brother','sister','grandchild','other']
+const RELATIONS = ['head','spouse','son','daughter','daughter-in-law','father','mother','brother','sister','grandchild','other']
 const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white'
 
 function MemberCard({ member }: { member: FamilyMemberRow }) {
