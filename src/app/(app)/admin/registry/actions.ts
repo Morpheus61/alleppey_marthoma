@@ -232,17 +232,23 @@ export async function linkProfileToMember(memberId: string, profileId: string): 
   if (!fm) return { error: 'Family member not found' }
 
   // 0. Clear any previous family_member row that claims this profile
-  //    (handles re-linking: e.g. account was under V E George, now moved to his Son)
+  //    AND reset claim_status to 'unclaimed' first — this is what lets
+  //    the lock_claimed_identity trigger pass on the subsequent re-point.
   await supabase.from('family_members').update({ profile_id: null }).eq('profile_id', profileId)
+  await supabase
+    .from('profiles')
+    .update({ family_member_id: null, claim_status: 'unclaimed' })
+    .eq('id', profileId)
 
   // 1. Set family_members.profile_id on the target member row
   const { error } = await supabase.from('family_members').update({ profile_id: profileId }).eq('id', memberId)
   if (error) return { error: error.message }
 
-  // 2. Set profiles.family_member_id + display_name + activate
-  //    display_name is updated to the linked member's name so pickers (role assignment,
-  //    Convenors, etc.) show the correct person — not whoever registered the phone number.
-  await supabase
+  // 2. Set profiles.family_member_id + display_name + activate.
+  //    Trigger allows this because claim_status was just reset to 'unclaimed'.
+  //    display_name is updated to the linked member's name so pickers show
+  //    the correct person — not whoever originally registered the phone.
+  const { error: profErr } = await supabase
     .from('profiles')
     .update({
       family_member_id: memberId,
@@ -251,6 +257,7 @@ export async function linkProfileToMember(memberId: string, profileId: string): 
       status:           'active',
     })
     .eq('id', profileId)
+  if (profErr) return { error: profErr.message }
 
   revalidatePath(`/admin/registry/${fm.family_id}`)
   revalidatePath('/admin/roles')
