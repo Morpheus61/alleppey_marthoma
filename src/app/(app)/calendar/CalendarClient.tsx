@@ -3,6 +3,7 @@ import { useState, useRef, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, X, Plus, Pencil } from 'lucide-react'
 import { createEvent, deleteEvent, updateEvent } from './actions'
 import { IST_TZ } from '@/lib/dates'
+import PendingQueue from './PendingQueue'
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -18,6 +19,8 @@ interface CalEvent {
   group_id: string | null
   is_festival: boolean
   created_by: string
+  approval_status: string
+  rejection_reason: string | null
   groups: { name: string; name_ml: string | null; group_type: string } | null
 }
 interface Template {
@@ -106,7 +109,7 @@ function eventColor(ev: CalEvent) {
 // EventSheet
 // ─────────────────────────────────────────────────────────────
 function EventSheet({
-  date, templates, prayerGroups, familyUnits, onClose, currentUserId,
+  date, templates, prayerGroups, familyUnits, onClose, currentUserId, convenorGroupIds, convenorGroups,
 }: {
   date: string
   templates: Template[]
@@ -114,6 +117,8 @@ function EventSheet({
   familyUnits: FamilyUnit[]
   onClose: () => void
   currentUserId: string
+  convenorGroupIds: string[]   // empty = admin; non-empty = scoped to these groups
+  convenorGroups: { id: string; name: string; name_ml: string | null }[]
 }) {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [title, setTitle]           = useState('')
@@ -134,7 +139,14 @@ function EventSheet({
 
   const isPrayerMeeting = selectedTemplate?.group_type_hint === 'prayer'
   const requiresHostFamily = selectedTemplate?.requires_host_family === true
+  // Convenors only see their own group(s) in the Bhagam picker
+  const visiblePrayerGroups = convenorGroupIds.length > 0
+    ? prayerGroups.filter(g => convenorGroupIds.includes(g.id))
+    : prayerGroups
   const filteredFamilies = familyUnits.filter(f => f.prayer_group_id === prayerGroupId)
+  // Multi-group Convenors: show a selector for non-prayer-meeting events
+  const showConvenorGroupPicker = !isPrayerMeeting && convenorGroups.length > 1
+  const [selectedConvenorGroupId, setSelectedConvenorGroupId] = useState(convenorGroups[0]?.id ?? '')
 
   const inp = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900 bg-white'
 
@@ -188,6 +200,12 @@ function EventSheet({
     fd.set('is_festival', String(isFestival))
     if (isPrayerMeeting && prayerGroupId) fd.set('group_id', prayerGroupId)
     if (isPrayerMeeting && hostFamilyId)  fd.set('host_family_id', hostFamilyId)
+    // Convenors creating non-prayer events: attach their group so requireCreateAccess passes.
+    // Multi-group Convenors: use the value from the group selector.
+    if (!isPrayerMeeting && convenorGroupIds.length > 0) {
+      const gid = convenorGroups.length > 1 ? selectedConvenorGroupId : (convenorGroupIds[0] ?? '')
+      if (gid) fd.set('group_id', gid)
+    }
     const rrule = buildRRule(recurrence, date)
     if (rrule) fd.set('rrule', rrule)
     fd.set('reminder_minutes', String(reminderMin))
@@ -254,8 +272,8 @@ function EventSheet({
                 <select value={prayerGroupId} onChange={e => { setPrayerGroupId(e.target.value); setHostFamilyId('') }}
                   className={inp}>
                   <option value="">Select Bhagam…</option>
-                  {prayerGroups.map(g => (
-                    <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
+                  {visiblePrayerGroups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name_ml ? g.name_ml + ' \u2014 ' : ''}{g.name}</option>
                   ))}
                 </select>
               </div>
@@ -287,6 +305,28 @@ function EventSheet({
                     placeholder="Host home, Church, Parish Hall…" className={inp} />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Multi-group Convenor: explicit group selector for non-prayer events */}
+          {showConvenorGroupPicker && (
+            <div>
+              <label className="block text-[10px] font-semibold text-amber-700 uppercase mb-0.5">
+                Schedule for Group *
+              </label>
+              <select
+                value={selectedConvenorGroupId}
+                onChange={e => setSelectedConvenorGroupId(e.target.value)}
+                required
+                className={inp}
+              >
+                <option value="">Select group\u2026</option>
+                {convenorGroups.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.name_ml ? g.name_ml + ' \u2014 ' : ''}{g.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -554,7 +594,10 @@ function DayEventDots({ evs }: { evs: CalEvent[] }) {
   return (
     <div className="flex gap-0.5 justify-center mt-0.5 flex-wrap">
       {shown.map(e => (
-        <span key={e.id} className={`w-1.5 h-1.5 rounded-full ${eventColor(e)}`} />
+        <span
+          key={e.id}
+          className={'w-1.5 h-1.5 rounded-full ' + (e.approval_status !== 'approved' ? 'bg-amber-300 opacity-70' : eventColor(e))}
+        />
       ))}
       {evs.length > maxDots && (
         <span className="text-[8px] text-muted-foreground leading-none">+{evs.length - maxDots}</span>
@@ -566,9 +609,9 @@ function DayEventDots({ evs }: { evs: CalEvent[] }) {
 // ─────────────────────────────────────────────────────────────
 // Day detail popover (click on event)
 // ─────────────────────────────────────────────────────────────
-function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
+function DayDetail({ day, evs, onClose, isAdmin, isSuperAdmin, currentUserId }: {
   day: string; evs: CalEvent[]; onClose: () => void
-  isAdmin: boolean; currentUserId: string
+  isAdmin: boolean; isSuperAdmin: boolean; currentUserId: string
 }) {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -602,16 +645,31 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
         </div>
         <div className="divide-y">
           {evs.map(ev => (
-            <div key={ev.id} className={`px-5 py-3 flex items-start justify-between gap-3 ${ev.is_festival ? 'bg-amber-50' : ''}`}>
+            <div key={ev.id} className={'px-5 py-3 flex items-start justify-between gap-3 ' + (ev.is_festival ? 'bg-amber-50' : '') + (ev.approval_status !== 'approved' ? ' bg-amber-50/60' : '')}>
               <div className="flex gap-3 min-w-0 flex-1">
-                <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${eventColor(ev)}`} />
+                <span className={'mt-1.5 w-2 h-2 rounded-full shrink-0 ' + (ev.approval_status !== 'approved' ? 'bg-amber-300' : eventColor(ev))} />
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm">{ev.title}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-sm">{ev.title}</p>
+                    {ev.approval_status !== 'approved' && ev.approval_status !== 'rejected' && (
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                        Pending Approval
+                      </span>
+                    )}
+                    {ev.approval_status === 'rejected' && (
+                      <span className="text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full">
+                        Rejected
+                      </span>
+                    )}
+                  </div>
+                  {ev.approval_status === 'rejected' && ev.rejection_reason && (
+                    <p className="text-xs text-red-600 mt-0.5 italic">Reason: {ev.rejection_reason}</p>
+                  )}
                   {ev.title_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{ev.title_ml}</p>}
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {new Date(ev.starts_at).toLocaleTimeString('en-IN', { timeZone: IST_TZ, hour: '2-digit', minute: '2-digit' })}
-                    {ev.venue ? ` · ${ev.venue}` : ''}
-                    {ev.groups ? ` · ${ev.groups.name_ml ?? ev.groups.name}` : ''}
+                    {ev.venue ? ' · ' + ev.venue : ''}
+                    {ev.groups ? ' · ' + (ev.groups.name_ml ?? ev.groups.name) : ''}
                   </p>
                   {isAdmin && (
                     <div className="flex items-center gap-3 mt-2">
@@ -654,13 +712,17 @@ function DayDetail({ day, evs, onClose, isAdmin, currentUserId }: {
 // Main CalendarClient
 // ─────────────────────────────────────────────────────────────
 export default function CalendarClient({
-  events, templates, prayerGroups, familyUnits, isAdmin, currentUserId, serverDate,
+  events, templates, prayerGroups, familyUnits, isAdmin, isSuperAdmin, convenorGroupIds, convenorGroups, pendingEvents, currentUserId, serverDate,
 }: {
   events: CalEvent[]
   templates: Template[]
   prayerGroups: PrayerGroup[]
   familyUnits: FamilyUnit[]
   isAdmin: boolean
+  isSuperAdmin: boolean
+  convenorGroupIds: string[]   // empty for plain admins/Vicar; group IDs for Convenors
+  convenorGroups: { id: string; name: string; name_ml: string | null }[]  // full details for selector
+  pendingEvents: CalEvent[]
   currentUserId: string
   serverDate: string   // 'YYYY-MM-DD' — passed from server to avoid hydration mismatch
 }) {
@@ -710,6 +772,9 @@ export default function CalendarClient({
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
+      {/* Pending approval queue — visible to admins */}
+      {isSuperAdmin && <PendingQueue events={pendingEvents} />}
+
       {/* Month navigation */}
       <div className="flex items-center justify-between mb-6">
         <button onClick={prevMonth}
@@ -793,23 +858,23 @@ export default function CalendarClient({
       {/* Upcoming list */}
       <div className="mt-8 space-y-2">
         <h2 className="text-base font-bold text-brand-900 mb-3">Upcoming Events</h2>
-        {events.filter(ev => ev.starts_at >= serverDate).length === 0 ? (
+        {events.filter(ev => ev.starts_at >= serverDate && ev.approval_status === 'approved').length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">No upcoming events</p>
         ) : (
           events
-            .filter(ev => ev.starts_at >= serverDate)
+            .filter(ev => ev.starts_at >= serverDate && ev.approval_status === 'approved')
             .slice(0, 10)
             .map(ev => (
-              <div key={ev.id} className={`rounded-xl border px-4 py-3 shadow-sm flex gap-3 items-start ${ev.is_festival ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
-                <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${eventColor(ev)}`} />
+              <div key={ev.id} className={'rounded-xl border px-4 py-3 shadow-sm flex gap-3 items-start ' + (ev.is_festival ? 'bg-amber-50 border-amber-200' : 'bg-white')}>
+                <span className={'mt-1.5 w-2 h-2 rounded-full shrink-0 ' + eventColor(ev)} />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{ev.title}</p>
                   {ev.title_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{ev.title_ml}</p>}
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {new Date(ev.starts_at).toLocaleDateString('en-IN', { timeZone: IST_TZ, weekday:'short', day:'numeric', month:'short' })}
-                    {' '}·{' '}
+                    {' '}&middot;{' '}
                     {new Date(ev.starts_at).toLocaleTimeString('en-IN', { timeZone: IST_TZ, hour:'2-digit', minute:'2-digit' })}
-                    {ev.venue ? ` · ${ev.venue}` : ''}
+                    {ev.venue ? ' \u00b7 ' + ev.venue : ''}
                   </p>
                 </div>
               </div>
@@ -837,6 +902,8 @@ export default function CalendarClient({
           familyUnits={familyUnits}
           onClose={() => setSheetDate(null)}
           currentUserId={currentUserId}
+          convenorGroupIds={convenorGroupIds}
+          convenorGroups={convenorGroups}
         />
       )}
 
@@ -847,6 +914,7 @@ export default function CalendarClient({
           evs={eventsByDate.get(detailDate) ?? []}
           onClose={() => setDetailDate(null)}
           isAdmin={isAdmin}
+          isSuperAdmin={isSuperAdmin}
           currentUserId={currentUserId}
         />
       )}

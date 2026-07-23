@@ -1,7 +1,7 @@
 # How to Use — St. George Marthoma Church App
 ### Simple Guide for Members, Group Leaders & Admins
 
-*Last updated: 2026-07-16*
+*Last updated: 2026-07-23*
 
 ---
 
@@ -9,13 +9,25 @@
 
 ### Getting Started: How to Sign In
 
-1. Open the app on your phone or computer browser (or from your home screen if installed as a PWA)
-2. Enter your **10-digit Indian mobile number** (e.g. 9876543210)
-3. Tap **"Send OTP"**
-4. You will receive a **6-digit code** on your phone via SMS
-5. Enter the code and tap **"Verify & Sign In"**
+The app uses a **two-step model**: register once with OTP, then use a password for every sign-in after.
 
-> You do **not** need a password. Your mobile number is your identity.
+**First time (new account):**
+1. Enter your mobile number and tap **Continue**
+2. An OTP is sent via SMS — enter the 6-digit code
+3. Create a **password** (minimum 8 characters)
+4. Next time: enter number → password → done. No SMS needed.
+
+**Returning user (already have a password):**
+1. Enter your mobile number and tap **Continue**
+2. Enter your password and tap **Sign In**
+
+**New phone or device:** Enter number and password — no OTP required.
+
+**Forgot password?**
+1. Enter number → tap **Continue**
+2. Tap **Forgot password?** below the password field
+3. An OTP is sent to your phone — enter it
+4. Create a new password (minimum 8 characters)
 
 ---
 

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { todayIST } from '@/lib/dates'
+import GroupEventCard from '@/components/ui/GroupEventCard'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -41,14 +42,16 @@ export default async function GroupPublicPage({ params }: Props) {
     .eq('status', 'active')
 
   // Fetch upcoming public events
+  // Upcoming approved events for this group — public visibility only (public page)
   const { data: events } = await supabase
     .from('events')
-    .select('id, title, title_ml, starts_at, venue')
+    .select('id, title, title_ml, starts_at, venue, is_festival')
     .eq('group_id', group.id)
+    .eq('approval_status', 'approved')
     .eq('visibility', 'public')
     .gte('starts_at', todayIST())
     .order('starts_at')
-    .limit(5)
+    .limit(8)
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-2xl">
@@ -94,33 +97,20 @@ export default async function GroupPublicPage({ params }: Props) {
         </div>
       )}
 
-      {events && events.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+      <div className="mt-6">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Upcoming Events
           </h2>
-          <ul className="space-y-2">
-            {events.map((event) => (
-              <li key={event.id} className="rounded-lg border bg-card p-3">
-                <p className="font-medium">{event.title}</p>
-                {event.venue && (
-                  <p className="text-sm text-muted-foreground">{event.venue}</p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  {new Date(event.starts_at).toLocaleDateString('en-IN', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </li>
-            ))}
-          </ul>
+          {events && events.length > 0 ? (
+            <div className="space-y-2">
+              {events.map(ev => (
+                <GroupEventCard key={ev.id} ev={ev as import('@/components/ui/GroupEventCard').GroupEventItem} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No upcoming events</p>
+          )}
         </div>
-      )}
     </main>
   )
 }

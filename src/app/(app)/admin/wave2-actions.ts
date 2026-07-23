@@ -98,6 +98,66 @@ export async function revokeRole(formData: FormData): Promise<void> {
   revalidatePath('/admin/roles')
 }
 
+// ── Convenor Management ───────────────────────────────────────────────────────
+
+/**
+ * Appoint a person as Convenor (കൺവീനർ) for a group.
+ * Any active profile can be appointed — not just household heads.
+ * Stored in group_memberships with role='leader' (canonical DB value;
+ * UI displays it as 'Convenor / കൺവീനർ').
+ */
+export async function assignConvenor(formData: FormData): Promise<void> {
+  const { supabase, userId } = await requireSuperAdmin()
+  const profileId = (formData.get('profile_id') as string).trim()
+  const groupId   = (formData.get('group_id')   as string).trim()
+  if (!profileId || !groupId) return
+
+  // Upsert: if the person was a regular member, upgrade to leader (convenor)
+  // DB canonical value is 'leader'; UI displays it as 'Convenor (കൺവീനർ)'
+  await supabase.from('group_memberships').upsert(
+    { group_id: groupId, user_id: profileId, role: 'leader', status: 'active' },
+    { onConflict: 'group_id,user_id' },
+  )
+
+  await supabase.from('audit_log').insert({
+    actor_id:     userId,
+    action:       'convenor.assign',
+    target_table: 'group_memberships',
+    target_id:    profileId,
+    details:      { group_id: groupId },
+  })
+
+  revalidatePath('/admin/roles')
+}
+
+/**
+ * Remove a Convenor role — downgrades to plain 'member' status.
+ * The person remains in the group as a member.
+ */
+export async function removeConvenor(formData: FormData): Promise<void> {
+  const { supabase, userId } = await requireSuperAdmin()
+  const membershipId = (formData.get('membershipId') as string).trim()
+  const profileId    = (formData.get('profileId')    as string).trim()
+  const groupId      = (formData.get('groupId')      as string).trim()
+  if (!membershipId) return
+
+  // Downgrade to 'member' rather than delete (preserves group membership)
+  await supabase
+    .from('group_memberships')
+    .update({ role: 'member' })
+    .eq('id', membershipId)
+
+  await supabase.from('audit_log').insert({
+    actor_id:     userId,
+    action:       'convenor.remove',
+    target_table: 'group_memberships',
+    target_id:    profileId,
+    details:      { group_id: groupId },
+  })
+
+  revalidatePath('/admin/roles')
+}
+
 // ── Change Requests ───────────────────────────────────────────────────────────
 
 export async function submitChangeRequest(formData: FormData) {

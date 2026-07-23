@@ -4,6 +4,8 @@ import Link from 'next/link'
 import type { Group, Profile } from '@/types/database'
 import { postToGroup, approveJoinRequest, declineJoinRequest, removeMember, appointLeader, revokeLeader, updateGroupInfo } from './actions'
 import BilingualPostComposer from '@/components/posts/BilingualPostComposer'
+import GroupEventCard from '@/components/ui/GroupEventCard'
+import { todayIST } from '@/lib/dates'
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -51,6 +53,16 @@ export default async function ManagePage({ params }: Props) {
   const requests = requestsRaw ?? []
   const activeMembers = activeRaw ?? []
 
+  // Upcoming approved events — all visibility levels (leader can see members-only)
+  const { data: upcomingEvents } = await supabase
+    .from('events')
+    .select('id, title, title_ml, starts_at, venue, is_festival')
+    .eq('group_id', group.id)
+    .eq('approval_status', 'approved')
+    .gte('starts_at', todayIST())
+    .order('starts_at')
+    .limit(8)
+
   const postAction       = postToGroup.bind(null, group.id)
   const editGroupAction  = updateGroupInfo.bind(null, group.id)
   const btn = 'text-xs font-semibold px-3 py-1.5 rounded-lg min-h-[36px] transition-colors'
@@ -63,8 +75,15 @@ export default async function ManagePage({ params }: Props) {
         <Link href="/groups" className="text-xs text-muted-foreground hover:text-foreground mb-3 block">← Back to Groups</Link>
         <h1 className="text-xl font-bold text-brand-900">{group.name}</h1>
         {group.name_ml && <p className="font-malayalam text-muted-foreground text-sm mt-0.5" lang="ml">{group.name_ml}</p>}
-        <div className="flex gap-2 mt-2">
-          <Link href={`/groups/${group.slug}/feed`} className="text-xs text-brand-700 underline underline-offset-2">View Feed →</Link>
+        <div className="flex gap-3 mt-2 flex-wrap">
+          <Link href={'/groups/' + group.slug + '/feed'} className="text-xs text-brand-700 underline underline-offset-2">View Feed →</Link>
+          {/* Convenors / Leaders: schedule events from the parish calendar scoped to this group */}
+          <Link
+            href="/calendar"
+            className="text-xs font-semibold bg-brand-900 text-white px-3 py-1.5 rounded-lg hover:bg-brand-800 transition-colors min-h-[30px] flex items-center"
+          >
+            + Schedule Event
+          </Link>
         </div>
       </div>
 
@@ -144,8 +163,22 @@ export default async function ManagePage({ params }: Props) {
           action={postAction}
           groupName={group.name}
           showPinOption={true}
-          submitLabel={`Post to ${group.name}`}
+          submitLabel={'Post to ' + group.name}
         />
+      </section>
+
+      {/* ── Upcoming Events ── */}
+      <section>
+        <h2 className="text-base font-bold text-brand-900 mb-3">Upcoming Events</h2>
+        {(upcomingEvents ?? []).length > 0 ? (
+          <div className="space-y-2">
+            {(upcomingEvents ?? []).map(ev => (
+              <GroupEventCard key={ev.id} ev={ev as import('@/components/ui/GroupEventCard').GroupEventItem} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">No upcoming events</p>
+        )}
       </section>
 
       {/* ── Join Requests ── */}

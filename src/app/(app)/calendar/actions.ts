@@ -3,21 +3,50 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+// ── Auth helpers ──────────────────────────────────────────────────────────────
+
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
   const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   const { data: r } = await supabase.from('parish_roles')
-    .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
+    .select('role').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
   if (!p?.is_admin && !r) redirect('/calendar')
-  return { supabase, userId: user.id }
+  return { supabase, userId: user.id, isSuperAdmin: r?.role === 'super_admin' }
 }
 
 /**
- * Check if caller can edit a specific event.
- * - Admin / Super Admin: always yes
- * - Prayer Group Secretary/Convenor (future role): yes for their group's events
+ * For event creation: admin/super_admin may create any event.
+ * Convenors may create events for their own group only.
+ * Returns the caller context including approval routing.
+ */
+async function requireCreateAccess(groupId: string | null) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  const { data: r } = await supabase.from('parish_roles')
+    .select('role').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
+  const isAdmin = !!(p?.is_admin || r)
+  const isSuperAdmin = r?.role === 'super_admin'
+
+  if (isAdmin) return { supabase, userId: user.id, isSuperAdmin, isConvenor: false }
+
+  // Convenor path: check if caller is convenor for this group
+  // DB canonical value is 'leader'; UI displays it as Convenor (കൺവീനർ)
+  if (groupId) {
+    const { data: conv } = await supabase.from('group_memberships')
+      .select('id').eq('group_id', groupId).eq('user_id', user.id).eq('role', 'leader').eq('status', 'active').maybeSingle()
+    if (conv) return { supabase, userId: user.id, isSuperAdmin: false, isConvenor: true }
+  }
+  redirect('/calendar')
+}
+
+/**
+ * For event edits: admin/super_admin may edit any event.
+ * Convenors may edit events for their own group.
  */
 async function requireEventEditAccess(eventId: string) {
   const supabase = await createClient()
@@ -26,20 +55,26 @@ async function requireEventEditAccess(eventId: string) {
 
   const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   const { data: r } = await supabase.from('parish_roles')
-    .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
+    .select('role').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
   const isAdmin = !!(p?.is_admin || r)
+  const isSuperAdmin = r?.role === 'super_admin'
 
-  if (isAdmin) return { supabase, userId: user.id }
+  if (isAdmin) return { supabase, userId: user.id, isSuperAdmin }
 
-  // TODO: when prayer group secretary role is added to parish_roles,
-  // check if user is secretary/convenor for the event's group_id.
-  // For now, non-admins cannot edit events.
+  // Convenor check: fetch event's group_id then verify membership
+  // DB canonical value is 'leader'; UI displays it as Convenor (കൺവീനർ)
+  const { data: ev } = await supabase.from('events').select('group_id').eq('id', eventId).single()
+  if (ev?.group_id) {
+    const { data: conv } = await supabase.from('group_memberships')
+      .select('id').eq('group_id', ev.group_id).eq('user_id', user.id).eq('role', 'leader').eq('status', 'active').maybeSingle()
+    if (conv) return { supabase, userId: user.id, isSuperAdmin: false }
+  }
   redirect('/calendar')
 }
 
-export async function createEvent(formData: FormData): Promise<{ error: string } | { id: string }> {
-  const { supabase, userId } = await requireAdmin()
+// ── Create ────────────────────────────────────────────────────────────────────
 
+export async function createEvent(formData: FormData): Promise<{ error: string } | { id: string }> {
   const title          = (formData.get('title') as string).trim()
   const titleMl        = (formData.get('title_ml') as string | null)?.trim() || null
   const startsAt       = formData.get('starts_at') as string
@@ -55,6 +90,15 @@ export async function createEvent(formData: FormData): Promise<{ error: string }
   if (!title) return { error: 'Title is required' }
   if (!startsAt) return { error: 'Date/time is required' }
 
+  const ctx = await requireCreateAccess(groupId)
+  const { supabase, userId, isSuperAdmin, isConvenor } = ctx
+
+  // Approval routing:
+  // - Vicar (super_admin) → approved directly
+  // - Convenor (own group) → approved directly
+  // - Secretary (admin) → pending, awaits Vicar approval
+  const approvalStatus = (isSuperAdmin || isConvenor) ? 'approved' : 'pending'
+
   const { data, error } = await supabase
     .from('events')
     .insert({
@@ -64,6 +108,7 @@ export async function createEvent(formData: FormData): Promise<{ error: string }
       is_festival: isFestival,
       rrule, reminder_minutes: reminderMin,
       created_by: userId,
+      approval_status: approvalStatus,
     })
     .select('id').single()
 
@@ -77,6 +122,8 @@ export async function createEvent(formData: FormData): Promise<{ error: string }
   return { id: data.id }
 }
 
+// ── Delete ────────────────────────────────────────────────────────────────────
+
 export async function deleteEvent(id: string): Promise<{ error: string } | { success: true }> {
   const { supabase } = await requireAdmin()
   const { error } = await supabase.from('events').delete().eq('id', id)
@@ -85,11 +132,13 @@ export async function deleteEvent(id: string): Promise<{ error: string } | { suc
   return { success: true }
 }
 
+// ── Update ────────────────────────────────────────────────────────────────────
+
 export async function updateEvent(formData: FormData): Promise<{ error: string } | { success: true }> {
   const id = (formData.get('id') as string).trim()
   if (!id) return { error: 'Event ID is required' }
 
-  const { supabase } = await requireEventEditAccess(id)
+  const { supabase, userId, isSuperAdmin } = await requireEventEditAccess(id)
 
   const title       = (formData.get('title') as string).trim()
   const titleMl     = (formData.get('title_ml') as string | null)?.trim() || null
@@ -103,13 +152,111 @@ export async function updateEvent(formData: FormData): Promise<{ error: string }
   if (!title) return { error: 'Title is required' }
   if (!startsAt) return { error: 'Date/time is required' }
 
+  // Fetch current state for audit + approval_status preservation
+  const { data: existing } = await supabase
+    .from('events')
+    .select('approval_status, title, title_ml, starts_at, ends_at, venue, visibility')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase
     .from('events')
-    .update({ title, title_ml: titleMl, starts_at: startsAt, ends_at: endsAt || null, venue, visibility, is_festival: isFestival, reminder_minutes: reminderMin })
+    .update({
+      title, title_ml: titleMl, starts_at: startsAt, ends_at: endsAt || null,
+      venue, visibility, is_festival: isFestival, reminder_minutes: reminderMin,
+      // approval_status intentionally NOT changed — secretary edits stay 'approved'
+    })
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  // Audit-log edits to already-approved events (Vicar visibility, no gate)
+  if (existing?.approval_status === 'approved' && !isSuperAdmin) {
+    await supabase.from('event_edit_log').insert({
+      event_id: id,
+      actor_id: userId,
+      before_data: {
+        title:    existing.title,
+        title_ml: existing.title_ml,
+        starts_at: existing.starts_at,
+        ends_at:  existing.ends_at,
+        venue:    existing.venue,
+      },
+      after_data: { title, title_ml: titleMl, starts_at: startsAt, ends_at: endsAt || null, venue },
+    })
+  }
+
   revalidatePath('/calendar')
   revalidatePath('/')
+  return { success: true }
+}
+
+// ── Approve (Vicar only) ──────────────────────────────────────────────────────
+
+export async function approveEvent(id: string): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const { data: r } = await supabase.from('parish_roles')
+    .select('id').eq('profile_id', user.id).eq('role', 'super_admin').is('revoked_at', null).maybeSingle()
+  const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!r && !p?.is_admin) return { error: 'Only the Vicar can approve events.' }
+
+  // Fetch event title for audit log
+  const { data: ev } = await supabase.from('events').select('title').eq('id', id).single()
+
+  const { error } = await supabase
+    .from('events')
+    .update({ approval_status: 'approved', rejection_reason: null })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_log').insert({
+    actor_id:     user.id,
+    action:       'event.approve',
+    target_table: 'events',
+    target_id:    id,
+    details:      { title: ev?.title },
+  })
+
+  revalidatePath('/calendar')
+  return { success: true }
+}
+
+// ── Reject (Vicar only) ───────────────────────────────────────────────────────
+
+export async function rejectEvent(id: string, reason?: string): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const { data: r } = await supabase.from('parish_roles')
+    .select('id').eq('profile_id', user.id).eq('role', 'super_admin').is('revoked_at', null).maybeSingle()
+  const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!r && !p?.is_admin) return { error: 'Only the Vicar can reject events.' }
+
+  // Fetch event title for audit log
+  const { data: ev } = await supabase.from('events').select('title').eq('id', id).single()
+
+  const trimmedReason = reason?.trim() || null
+
+  const { error } = await supabase
+    .from('events')
+    .update({ approval_status: 'rejected', rejection_reason: trimmedReason })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_log').insert({
+    actor_id:     user.id,
+    action:       'event.reject',
+    target_table: 'events',
+    target_id:    id,
+    details:      { title: ev?.title, reason: trimmedReason },
+  })
+
+  revalidatePath('/calendar')
   return { success: true }
 }

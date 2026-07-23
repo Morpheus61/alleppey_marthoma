@@ -335,6 +335,7 @@ export type PushSubscription = Database['public']['Tables']['push_subscriptions'
 // ── Wave 2: Parish Role System ────────────────────────────────────────────────
 
 export type ParishRoleKind = 'deacon' | 'treasurer' | 'admin' | 'super_admin'
+// Note: 'convenor' is stored in group_memberships.role, not in parish_roles
 
 export interface ParishRole {
   id:          string

@@ -1,4 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
+// write-roles-page-v2.cjs
+// Overwrites the admin roles page.tsx with person-based picker + Convenors panel
+// Run: node src/scripts/write-roles-page-v2.cjs
+
+const fs = require('fs')
+const path = require('path')
+
+const outPath = path.join(__dirname, '../app/(app)/admin/roles/page.tsx')
+
+const content = `import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { assignRole, revokeRole, assignConvenor, removeConvenor } from '../wave2-actions'
 
@@ -55,12 +64,11 @@ export default async function RolesPage() {
   const { data: enrichedMembers } = await supabase
     .rpc('active_profiles_with_context')
 
-  // Current convenors: group_memberships with role='leader'
-  // DB canonical value is 'leader'; UI displays as Convenor (കൺവീനർ)
+  // Current convenors: group_memberships with role='convenor'
   const { data: convenorRows } = await supabase
     .from('group_memberships')
-    .select('id, group_id, user_id, groups!group_id(name, name_ml, group_type), profiles!user_id(full_name, full_name_ml, phone)')
-    .eq('role', 'leader')
+    .select('id, group_id, user_id, groups!group_id(name, name_ml), profiles!user_id(full_name, full_name_ml, phone)')
+    .eq('role', 'convenor')
     .eq('status', 'active')
     .order('created_at')
 
@@ -86,7 +94,7 @@ export default async function RolesPage() {
     id: string
     group_id: string
     user_id: string
-    groups: { name: string; name_ml: string | null; group_type: string } | null
+    groups: { name: string; name_ml: string | null } | null
     profiles: { full_name: string; full_name_ml: string | null; phone: string } | null
   }
 
@@ -112,7 +120,7 @@ export default async function RolesPage() {
           {Object.entries(ROLE_META).map(([key, meta]) => (
             <div key={key} className="bg-white rounded-xl border border-amber-100 px-4 py-3 shadow-sm">
               <div className="flex items-start gap-3 flex-wrap">
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${meta.colour}`}>{meta.en}</span>
+                <span className={\`text-[11px] font-bold px-2 py-0.5 rounded-full border \${meta.colour}\`}>{meta.en}</span>
                 <span className="text-[11px] font-malayalam text-muted-foreground" lang="ml">{meta.ml}</span>
               </div>
               <ul className="mt-2 space-y-0.5">
@@ -157,11 +165,11 @@ export default async function RolesPage() {
                   {profile?.full_name_ml && <p className="text-xs font-malayalam text-muted-foreground" lang="ml">{profile.full_name_ml}</p>}
                   <p className="text-xs text-muted-foreground">{profile?.phone}</p>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${meta.colour}`}>{meta.en}</span>
+                <span className={\`text-[11px] font-bold px-2 py-0.5 rounded-full border \${meta.colour}\`}>{meta.en}</span>
                 {!isSelf && (
                   <form action={revokeRole}>
                     <input type="hidden" name="roleId" value={r.id} />
-                    <button className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Revoke</button>
+                    <button className={\`\${btn} bg-red-50 text-red-700 hover:bg-red-100\`}>Revoke</button>
                   </form>
                 )}
               </div>
@@ -203,7 +211,7 @@ export default async function RolesPage() {
               </select>
             </div>
           </div>
-          <button type="submit" className={`w-full ${btn} bg-brand-900 text-white hover:bg-brand-800 py-2.5`}>
+          <button type="submit" className={\`w-full \${btn} bg-brand-900 text-white hover:bg-brand-800 py-2.5\`}>
             Assign Role
           </button>
           <p className="text-[11px] text-muted-foreground text-center">
@@ -244,7 +252,7 @@ export default async function RolesPage() {
                     <input type="hidden" name="membershipId" value={c.id} />
                     <input type="hidden" name="profileId"    value={c.user_id} />
                     <input type="hidden" name="groupId"      value={c.group_id} />
-                    <button className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}>Remove</button>
+                    <button className={\`\${btn} bg-red-50 text-red-700 hover:bg-red-100\`}>Remove</button>
                   </form>
                 </div>
               )
@@ -283,7 +291,7 @@ export default async function RolesPage() {
               </select>
             </div>
           </div>
-          <button type="submit" className={`w-full ${btn} bg-purple-700 text-white hover:bg-purple-800 py-2.5`}>
+          <button type="submit" className={\`w-full \${btn} bg-purple-700 text-white hover:bg-purple-800 py-2.5\`}>
             Appoint as Convenor
           </button>
         </form>
@@ -291,3 +299,7 @@ export default async function RolesPage() {
     </div>
   )
 }
+`
+
+fs.writeFileSync(outPath, content, 'utf8')
+console.log('Wrote', outPath)
