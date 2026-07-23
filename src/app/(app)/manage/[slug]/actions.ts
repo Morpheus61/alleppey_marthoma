@@ -81,22 +81,49 @@ export async function removeMember(groupId: string, userId: string) {
 
 export async function appointLeader(groupId: string, userId: string) {
   const { supabase } = await requireLeaderOrAdmin(groupId)
+
+  // Demote any existing leader(s) in this group back to member
+  await supabase
+    .from('group_memberships')
+    .update({ role: 'member' })
+    .eq('group_id', groupId)
+    .eq('role', 'leader')
+
+  // Elevate the new convenor
   await supabase
     .from('group_memberships')
     .update({ role: 'leader' })
     .eq('group_id', groupId)
     .eq('user_id', userId)
+
+  // Persist as the authoritative convenor on the group record
+  await supabase
+    .from('groups')
+    .update({ convenor_id: userId })
+    .eq('id', groupId)
+
   revalidatePath(`/manage/${groupId}`)
+  revalidatePath(`/groups/${groupId}`)
 }
 
 export async function revokeLeader(groupId: string, userId: string) {
   const { supabase } = await requireLeaderOrAdmin(groupId)
+
   await supabase
     .from('group_memberships')
     .update({ role: 'member' })
     .eq('group_id', groupId)
     .eq('user_id', userId)
+
+  // Clear convenor_id only if this person IS the current convenor
+  await supabase
+    .from('groups')
+    .update({ convenor_id: null })
+    .eq('id', groupId)
+    .eq('convenor_id', userId)
+
   revalidatePath(`/manage/${groupId}`)
+  revalidatePath(`/groups/${groupId}`)
 }
 
 /* ── Update Group Info ────────────────────────── */

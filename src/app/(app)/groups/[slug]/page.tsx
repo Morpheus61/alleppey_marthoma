@@ -26,20 +26,15 @@ export default async function GroupPublicPage({ params }: Props) {
 
   const { data: group } = await supabase
     .from('groups')
-    .select('*')
+    .select('*, convenor:profiles!groups_convenor_id_fkey(full_name, full_name_ml, avatar_url)')
     .eq('slug', slug)
     .eq('is_archived', false)
     .single()
 
   if (!group) notFound()
 
-  // Fetch leaders
-  const { data: leaders } = await supabase
-    .from('group_memberships')
-    .select('user_id, profiles(full_name, full_name_ml, avatar_url)')
-    .eq('group_id', group.id)
-    .eq('role', 'leader')
-    .eq('status', 'active')
+  // convenor comes from the authoritative groups.convenor_id column
+  const convenor = (group as unknown as { convenor: { full_name: string; full_name_ml?: string | null; avatar_url?: string | null } | null }).convenor
 
   // Fetch upcoming public events
   // Upcoming approved events for this group — public visibility only (public page)
@@ -76,23 +71,17 @@ export default async function GroupPublicPage({ params }: Props) {
         </div>
       )}
 
-      {leaders && leaders.length > 0 && (
+      {convenor && (
         <div className="mt-6">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             {t('leaders')}
           </h2>
           <div className="flex flex-wrap gap-2">
-            {leaders.map((l) => {
-              const profile = (l.profiles as unknown) as { full_name: string; full_name_ml?: string | null; avatar_url?: string | null } | null
-              return (
-                <span
-                  key={l.user_id}
-                  className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-900"
-                >
-                  {profile?.full_name}
-                </span>
-              )
-            })}
+            <span
+              className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-900"
+            >
+              {convenor.full_name}
+            </span>
           </div>
         </div>
       )}
