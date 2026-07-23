@@ -14,14 +14,18 @@ export interface FamilyMember {
 }
 
 export interface MemberRecord {
+  // family_members.id — this is the registry person ID, used as family_member_id
   id: string
+  family_id: string | null
   full_name: string
   full_name_ml: string | null
-  phone: string
+  phone: string | null
   house_name: string | null
+  house_name_ml: string | null
   address: string | null
   date_of_birth: string | null
-  ward: string | null
+  ward: string | null           // prayer group / Bhagam name
+  relation_to_head: string | null
   family_register_no: string | null
   baptism_date: string | null
   baptism_register_no: string | null
@@ -31,11 +35,11 @@ export interface MemberRecord {
   mother_name: string | null
   godfather: string | null
   godmother: string | null
-  family_members: FamilyMember[] | null  // JSONB column — relation strings are Title Case
-  display_name: string | null
-  avatar_url: string | null
-  is_admin: boolean
-  claim_status: string | null
+  // Linked app account, if any — set when the registry person has claimed a profile
+  profile_id: string | null
+  // Legacy JSONB field from the old profiles-based approach. Always null for
+  // registry-sourced records; kept so the PDF helper functions compile unchanged.
+  family_members: FamilyMember[] | null
 }
 
 export interface CertificateRequest {

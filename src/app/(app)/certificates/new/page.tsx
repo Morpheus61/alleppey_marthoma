@@ -137,11 +137,12 @@ export default function NewCertificatePage() {
         sigUrl = await uploadSignature(sigDataUrl, fileName)
       }
       const req = await createCertificateRequest({
-        cert_type:  certType,
-        cert_no:    certNo,
-        member_id:  member.id,
+        cert_type:        certType,
+        cert_no:          certNo,
+        family_member_id: member.id,               // family_members.id (registry)
+        member_id:        member.profile_id ?? null, // profiles.id if account linked
         extras,
-        created_by: currentUserId,
+        created_by:       currentUserId,
         secretary_signature_url:  sigUrl,
         secretary_signature_type: sigUrl ? sigType : undefined,
       })

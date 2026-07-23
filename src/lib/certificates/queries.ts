@@ -1,15 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { MemberRecord, CertificateRequest, CertType } from './types'
 
-const MEMBER_SELECT = `
-  id, full_name, full_name_ml, phone, house_name, address,
-  date_of_birth, ward, family_register_no,
-  baptism_date, baptism_register_no,
-  confirmation_date, confirmation_register_no,
-  father_name, mother_name, godfather, godmother,
-  family_members, display_name, avatar_url, is_admin, claim_status
-`.trim()
-
 /**
  * Returns the full name of the current Vicar (super_admin parish role).
  * Used to pre-populate the Vicar field on all certificate types.
@@ -26,31 +17,31 @@ export async function getVicarName(): Promise<string> {
     ?.profiles?.full_name ?? ''
 }
 
-/** Live search of active members — does NOT filter by claim_status */
+/**
+ * Search the parish registry for certificate candidates.
+ * Matches on member name (English or Malayalam) OR family/house name.
+ * Only living registry members are returned — no app account required.
+ */
 export async function searchMembers(query: string): Promise<MemberRecord[]> {
   if (!query.trim()) return []
   const supabase = createClient()
   const { data, error } = await supabase
-    .from('profiles')
-    .select(MEMBER_SELECT)
-    .ilike('full_name', `%${query}%`)
-    .eq('status', 'active')
-    .order('full_name')
-    .limit(10)
+    .rpc('search_registry_for_certs', { p_query: query.trim() })
   if (error) throw error
   return (data ?? []) as unknown as MemberRecord[]
 }
 
-/** Fetch a single member by ID */
+/**
+ * Fetch a single registry member by family_member_id.
+ * Used by the approval queue and certificate detail page.
+ */
 export async function getMemberById(id: string): Promise<MemberRecord | null> {
   const supabase = createClient()
   const { data, error } = await supabase
-    .from('profiles')
-    .select(MEMBER_SELECT)
-    .eq('id', id)
-    .single()
+    .rpc('get_registry_member_for_cert', { p_id: id })
   if (error) return null
-  return data as unknown as MemberRecord
+  const row = (data as unknown[])?.[0]
+  return row ? (row as MemberRecord) : null
 }
 
 /** Generate the next certificate number for a given type */
@@ -68,11 +59,14 @@ export async function getNextCertNo(certType: CertType): Promise<string> {
   return `SGMC-${prefix[certType]}-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`
 }
 
-/** Submit a new certificate request */
+/** Submit a new certificate request linked to the parish registry. */
 export async function createCertificateRequest(payload: {
   cert_type: CertType
   cert_no: string
-  member_id: string
+  /** family_members.id — the authoritative registry link */
+  family_member_id: string
+  /** profiles.id — set only when the registry person has a linked app account */
+  member_id?: string | null
   extras: Record<string, string>
   created_by: string
   secretary_signature_url?: string
@@ -88,6 +82,52 @@ export async function createCertificateRequest(payload: {
   return data as unknown as CertificateRequest
 }
 
+// ── Internal helper: flatten a nested family_members join row into MemberRecord ──
+function flattenRegistryMember(rm: unknown): MemberRecord | undefined {
+  if (!rm) return undefined
+  const r = rm as {
+    id: string
+    full_name: string
+    full_name_ml: string | null
+    date_of_birth: string | null
+    relation_to_head: string | null
+    phone: string | null
+    profile_id: string | null
+    family_units: {
+      house_name: string
+      house_name_ml: string | null
+      address: string | null
+      family_register_no: string | null
+      groups: { name: string } | null
+    } | null
+  }
+  return {
+    id:                       r.id,
+    family_id:                r.family_units ? (rm as { family_units: { id?: string } }).family_units?.id ?? null : null,
+    full_name:                r.full_name,
+    full_name_ml:             r.full_name_ml,
+    date_of_birth:            r.date_of_birth,
+    relation_to_head:         r.relation_to_head,
+    phone:                    r.phone,
+    house_name:               r.family_units?.house_name ?? null,
+    house_name_ml:            r.family_units?.house_name_ml ?? null,
+    address:                  r.family_units?.address ?? null,
+    family_register_no:       r.family_units?.family_register_no ?? null,
+    ward:                     r.family_units?.groups?.name ?? null,
+    profile_id:               r.profile_id,
+    // Life events are in extras (filled by secretary at cert creation time)
+    baptism_date:             null,
+    baptism_register_no:      null,
+    confirmation_date:        null,
+    confirmation_register_no: null,
+    father_name:              null,
+    mother_name:              null,
+    godfather:                null,
+    godmother:                null,
+    family_members:           null,
+  }
+}
+
 /** All pending requests with joined member + creator data */
 export async function getPendingRequests(): Promise<CertificateRequest[]> {
   const supabase = createClient()
@@ -95,19 +135,25 @@ export async function getPendingRequests(): Promise<CertificateRequest[]> {
     .from('certificate_requests')
     .select(`
       *,
-      member:profiles!member_id(
-        id, full_name, full_name_ml, phone, house_name, ward, address,
-        date_of_birth, father_name, mother_name,
-        baptism_date, baptism_register_no,
-        confirmation_date, confirmation_register_no,
-        family_register_no, godfather, godmother, family_members
+      registry_member:family_members!family_member_id(
+        id, full_name, full_name_ml, date_of_birth, relation_to_head, phone, profile_id,
+        family_units!family_id(
+          house_name, house_name_ml, address, family_register_no,
+          groups!prayer_group_id(name)
+        )
       ),
       creator:profiles!created_by(id, full_name, phone)
     `)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []) as unknown as CertificateRequest[]
+  return ((data ?? []) as unknown[]).map((row) => {
+    const r = row as Record<string, unknown>
+    return {
+      ...r,
+      member: flattenRegistryMember(r.registry_member),
+    } as unknown as CertificateRequest
+  })
 }
 
 /** All requests — for the certificate log */
@@ -117,13 +163,19 @@ export async function getAllRequests(): Promise<CertificateRequest[]> {
     .from('certificate_requests')
     .select(`
       *,
-      member:profiles!member_id(id, full_name, full_name_ml, phone, house_name),
+      registry_member:family_members!family_member_id(
+        id, full_name, full_name_ml, phone, profile_id,
+        family_units!family_id(house_name)
+      ),
       creator:profiles!created_by(id, full_name)
     `)
     .order('created_at', { ascending: false })
     .limit(100)
   if (error) throw error
-  return (data ?? []) as unknown as CertificateRequest[]
+  return ((data ?? []) as unknown[]).map((row) => {
+    const r = row as Record<string, unknown>
+    return { ...r, member: flattenRegistryMember(r.registry_member) } as unknown as CertificateRequest
+  })
 }
 
 /** Fetch a single certificate request by ID */
@@ -133,12 +185,12 @@ export async function getCertificateRequest(id: string): Promise<CertificateRequ
     .from('certificate_requests')
     .select(`
       *,
-      member:profiles!member_id(
-        id, full_name, full_name_ml, phone, house_name, ward, address,
-        date_of_birth, father_name, mother_name,
-        baptism_date, baptism_register_no,
-        confirmation_date, confirmation_register_no,
-        family_register_no, godfather, godmother, family_members
+      registry_member:family_members!family_member_id(
+        id, full_name, full_name_ml, date_of_birth, relation_to_head, phone, profile_id,
+        family_units!family_id(
+          house_name, house_name_ml, address, family_register_no,
+          groups!prayer_group_id(name)
+        )
       ),
       creator:profiles!created_by(id, full_name, phone),
       reviewer:profiles!reviewed_by(id, full_name)
@@ -146,7 +198,11 @@ export async function getCertificateRequest(id: string): Promise<CertificateRequ
     .eq('id', id)
     .single()
   if (error) return null
-  return data as unknown as CertificateRequest
+  const r = data as unknown as Record<string, unknown>
+  return {
+    ...r,
+    member: flattenRegistryMember(r.registry_member),
+  } as unknown as CertificateRequest
 }
 
 /** Vicar approves a request */

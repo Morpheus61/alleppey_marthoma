@@ -74,7 +74,7 @@ export default function MemberSearch({ onSelect, selected, onClear }: Props) {
           type="text"
           value={query}
           onChange={e => handleInput(e.target.value)}
-          placeholder="Type member name…"
+          placeholder="Search by member name or family name…"
           className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-900"
           autoComplete="off"
         />
@@ -108,7 +108,7 @@ export default function MemberSearch({ onSelect, selected, onClear }: Props) {
 
       {!loading && query.length > 1 && results.length === 0 && (
         <p className="text-xs text-muted-foreground mt-1.5 px-1">
-          No active members found for &ldquo;{query}&rdquo;
+          No registry members found for &ldquo;{query}&rdquo;
         </p>
       )}
     </div>
