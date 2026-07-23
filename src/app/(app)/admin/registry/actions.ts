@@ -224,21 +224,36 @@ export async function addLifeEvent(
 
 export async function linkProfileToMember(memberId: string, profileId: string): Promise<{ error: string } | { success: true }> {
   const { supabase } = await requireAdminOrAbove()
-  const { data: fm } = await supabase.from('family_members').select('family_id').eq('id', memberId).single()
+  const { data: fm } = await supabase
+    .from('family_members')
+    .select('family_id, full_name, full_name_ml')
+    .eq('id', memberId)
+    .single()
   if (!fm) return { error: 'Family member not found' }
 
-  // 1. Set family_members.profile_id
+  // 0. Clear any previous family_member row that claims this profile
+  //    (handles re-linking: e.g. account was under V E George, now moved to his Son)
+  await supabase.from('family_members').update({ profile_id: null }).eq('profile_id', profileId)
+
+  // 1. Set family_members.profile_id on the target member row
   const { error } = await supabase.from('family_members').update({ profile_id: profileId }).eq('id', memberId)
   if (error) return { error: error.message }
 
-  // 2. Set profiles.family_member_id + activate (bidirectional — required by finance page & RLS)
-  // This is the canonical single link path: both /admin/registry and /admin/users delegate here.
+  // 2. Set profiles.family_member_id + display_name + activate
+  //    display_name is updated to the linked member's name so pickers (role assignment,
+  //    Convenors, etc.) show the correct person — not whoever registered the phone number.
   await supabase
     .from('profiles')
-    .update({ family_member_id: memberId, claim_status: 'approved', status: 'active' })
+    .update({
+      family_member_id: memberId,
+      display_name:     fm.full_name,
+      claim_status:     'approved',
+      status:           'active',
+    })
     .eq('id', profileId)
 
   revalidatePath(`/admin/registry/${fm.family_id}`)
+  revalidatePath('/admin/roles')
   revalidatePath('/finance')
   return { success: true }
 }
