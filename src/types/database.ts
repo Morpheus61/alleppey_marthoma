@@ -43,6 +43,7 @@ export interface Database {
           family_member_id: string | null
           display_name: string | null
           claim_status: 'unclaimed' | 'pending_claim' | 'approved'
+          notify_pulpit_messages: boolean
         }
         Insert: {
           id: string
@@ -66,6 +67,7 @@ export interface Database {
           family_member_id?: string | null
           display_name?: string | null
           claim_status?: 'unclaimed' | 'pending_claim' | 'approved'
+          notify_pulpit_messages?: boolean
         }
         Update: {
           id?: string
@@ -79,6 +81,7 @@ export interface Database {
           display_name?: string | null
           claim_status?: 'unclaimed' | 'pending_claim' | 'approved'
           ui_language?: 'en' | 'ml'
+          notify_pulpit_messages?: boolean
           is_admin?: boolean
           status?: 'pending' | 'active' | 'disabled'
           created_at?: string

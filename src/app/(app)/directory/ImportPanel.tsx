@@ -43,9 +43,15 @@ export default function ImportPanel() {
         <div className="border-t border-amber-50 px-5 pb-5 pt-4 space-y-4">
           <p className="text-xs text-muted-foreground">
             Upload an <strong>Excel (.xlsx)</strong> or <strong>CSV</strong> file.<br />
-            Required columns: <code className="bg-gray-100 px-1 rounded">Name</code>&nbsp;
+            Required: <code className="bg-gray-100 px-1 rounded">Name</code>&nbsp;
             <code className="bg-gray-100 px-1 rounded">Phone</code>&nbsp;
-            <code className="bg-gray-100 px-1 rounded">House Name</code> (optional: Malayalam Name)
+            Optional: <code className="bg-gray-100 px-1 rounded">House Name</code>&nbsp;
+            <code className="bg-gray-100 px-1 rounded">Bhagam</code>&nbsp;
+            <code className="bg-gray-100 px-1 rounded">Malayalam Name</code>
+            <br />
+            <span className="text-[11px] text-amber-700">
+              When a <strong>Bhagam</strong> column is present, it will be applied automatically to matching households (prayer group name must match exactly).
+            </span>
           </p>
 
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-3">

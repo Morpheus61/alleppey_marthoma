@@ -264,3 +264,46 @@ export async function linkProfileToMember(memberId: string, profileId: string): 
   revalidatePath('/finance')
   return { success: true }
 }
+
+/* ── Request correction (admin → Vicar approval) ────────────────────────── */
+
+/**
+ * Office staff submit a correction for household or member registry data.
+ * Instead of directly editing, this creates a change_request for the Vicar
+ * (super_admin) to approve via /admin/approvals.
+ */
+export async function requestRegistryCorrection(
+  targetTable: 'family_units' | 'family_members',
+  targetId: string,
+  currentData: Record<string, unknown>,
+  formData: FormData,
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+  const { data: p } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  const { data: r } = await supabase.from('parish_roles')
+    .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
+  if (!p?.is_admin && !r) redirect('/admin')
+
+  const proposed: Record<string, string | null> = {}
+  for (const [key, value] of formData.entries()) {
+    proposed[key] = (value as string).trim() || null
+  }
+
+  const { error } = await supabase.from('change_requests').insert({
+    target_table:  targetTable,
+    target_id:     targetId,
+    change_type:   'update',
+    current_data:  currentData,
+    proposed_data: proposed,
+    requested_by:  user.id,
+  })
+
+  if (error) return { error: error.message }
+
+  const familyId = targetTable === 'family_units' ? targetId : (currentData.family_id as string | undefined)
+  if (familyId) revalidatePath(`/admin/registry/${familyId}`)
+  revalidatePath('/admin/approvals')
+  return { success: true }
+}

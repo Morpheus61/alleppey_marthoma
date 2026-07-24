@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import MessageCard from '@/components/pulpit/MessageCard'
+import PulpitSearchBox from '@/components/pulpit/PulpitSearchBox'
 import type { PulpitMessage } from '@/lib/pulpit/types'
 import { IST_TZ } from '@/lib/dates'
 
@@ -18,7 +19,7 @@ export const metadata = {
 export default async function PulpitPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; q?: string }>
 }) {
   const supabase = await createClient()
 
@@ -43,14 +44,26 @@ export default async function PulpitPage({
 
   const params = await searchParams
   const tab = params.tab === 'drafts' && isAdmin ? 'drafts' : 'published'
+  const searchQuery = (params.q ?? '').trim()
+  const isSearching = searchQuery.length >= 2
 
-  const { data: messagesRaw } = await supabase
+  let messagesQuery = supabase
     .from('pulpit_messages')
     .select('*, author:profiles!author_id(full_name, avatar_url)')
     .eq('is_published', tab === 'published')
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(30)
+
+  if (isSearching) {
+    // Search across full archive — no limit
+    messagesQuery = messagesQuery.or(
+      `body.ilike.%${searchQuery}%,title.ilike.%${searchQuery}%`
+    )
+  } else {
+    messagesQuery = messagesQuery.limit(30)
+  }
+
+  const { data: messagesRaw } = await messagesQuery
 
   const messages = (messagesRaw ?? []) as PulpitMessage[]
   const messageIds = messages.map(m => m.id)
@@ -139,28 +152,48 @@ export default async function PulpitPage({
         </div>
       )}
 
+      {/* Archive search */}
+      <PulpitSearchBox />
+
+      {/* Search result count */}
+      {isSearching && (
+        <p className="text-xs text-muted-foreground">
+          {enriched.length} {enriched.length === 1 ? 'message' : 'messages'} matching &ldquo;{searchQuery}&rdquo;
+        </p>
+      )}
+
       {/* Empty state */}
       {enriched.length === 0 && (
         <p className="text-center text-sm text-muted-foreground py-16">
-          {tab === 'drafts'
+          {isSearching
+            ? `No messages found for "${searchQuery}".`
+            : tab === 'drafts'
             ? 'No drafts saved.'
             : "The Vicar's first message will appear here."}
         </p>
       )}
 
-      {/* Feed — grouped by month */}
-      {[...grouped.entries()].map(([month, msgs]) => (
-        <div key={month}>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
-            {month}
-          </p>
-          <div className="space-y-4">
-            {msgs.map(m => (
-              <MessageCard key={m.id} message={m} isAuthenticated={isAuthenticated} />
-            ))}
-          </div>
+      {/* Feed — grouped by month (archive) or flat (search results) */}
+      {isSearching ? (
+        <div className="space-y-4">
+          {enriched.map(m => (
+            <MessageCard key={m.id} message={m} isAuthenticated={isAuthenticated} />
+          ))}
         </div>
-      ))}
+      ) : (
+        [...grouped.entries()].map(([month, msgs]) => (
+          <div key={month}>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+              {month}
+            </p>
+            <div className="space-y-4">
+              {msgs.map(m => (
+                <MessageCard key={m.id} message={m} isAuthenticated={isAuthenticated} />
+              ))}
+            </div>
+          </div>
+        ))
+      )}
 
     </div>
   )

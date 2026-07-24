@@ -126,6 +126,61 @@ export async function adminUpdateProfile(memberId: string, formData: FormData): 
   return { success: true }
 }
 
+/* ── Notification Preferences ───────────────── */
+
+export async function setNotifyPulpit(value: boolean): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ notify_pulpit_messages: value })
+    .eq('id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/me')
+  return { success: true }
+}
+
+/* ── Request own-profile correction ─────────── */
+
+/**
+ * Submit a correction request for the member's OWN core profile details
+ * (name, date of birth). These go to the Vicar for approval just like
+ * family-member corrections — the member cannot self-edit these fields.
+ */
+export async function requestProfileCorrection(
+  currentData: Record<string, unknown>,
+  formData: FormData,
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const proposed: Record<string, string | null> = {
+    full_name:     (formData.get('full_name') as string).trim(),
+    full_name_ml:  (formData.get('full_name_ml') as string | null)?.trim() || null,
+    date_of_birth: (formData.get('date_of_birth') as string | null) || null,
+    notes:         (formData.get('notes') as string | null)?.trim() || null,
+  }
+
+  if (!proposed.full_name) return { error: 'Full name is required' }
+
+  const { error } = await supabase.from('change_requests').insert({
+    target_table:  'profiles',
+    target_id:     user.id,
+    change_type:   'update',
+    current_data:  currentData,
+    proposed_data: proposed,
+    requested_by:  user.id,
+  })
+
+  if (error) return { error: error.message }
+  revalidatePath('/me')
+  return { success: true }
+}
+
 /* ── Photo URLs ──────────────────────────────── */
 
 /** Called immediately after a successful storage upload on the /me page */

@@ -19,6 +19,7 @@ export interface ImportRow {
   full_name_ml?: string | null
   phone: string
   house_name?: string | null
+  bhagam_name?: string | null
   status?: 'active' | 'pending'
 }
 
@@ -57,6 +58,7 @@ export async function importDirectory(formData: FormData) {
       full_name_ml: get(['full_name_ml', 'name_ml', 'malayalam_name']),
       phone:        phone10,
       house_name:   get(['house_name', 'house', 'family_name', 'house/family']),
+      bhagam_name:  get(['bhagam', 'bhagam_name', 'prayer_group', 'ward']),
       status:       'active' as const,
     }
   }).filter(r => r.full_name && r.phone.length === 10)
@@ -80,6 +82,44 @@ export async function importDirectory(formData: FormData) {
   )
 
   if (error) return { error: error.message }
+
+  // Best-effort: assign bhagam to existing family_units matched by house_name.
+  // This runs after the profile upsert and does not fail the import if it errors.
+  const bhagamRows = records.filter(r => r.bhagam_name && r.house_name)
+  if (bhagamRows.length > 0) {
+    // Fetch all prayer groups once
+    const { data: groups } = await supabase
+      .from('groups')
+      .select('id, name, name_ml')
+      .eq('group_type', 'prayer')
+      .eq('is_archived', false)
+
+    if (groups && groups.length > 0) {
+      // Collect unique house_name → bhagam_name pairs
+      const houseMap = new Map<string, string>()
+      for (const r of bhagamRows) {
+        if (r.house_name && r.bhagam_name && !houseMap.has(r.house_name)) {
+          houseMap.set(r.house_name, r.bhagam_name)
+        }
+      }
+
+      for (const [houseName, bhagamName] of houseMap.entries()) {
+        const normBhagam = bhagamName.toLowerCase().trim()
+        const matchedGroup = groups.find(
+          g => g.name.toLowerCase().trim() === normBhagam ||
+               (g.name_ml ?? '').trim() === bhagamName.trim()
+        )
+        if (!matchedGroup) continue
+
+        // Update any family_unit with this house_name that has no prayer_group_id yet
+        await supabase
+          .from('family_units')
+          .update({ prayer_group_id: matchedGroup.id })
+          .ilike('house_name', houseName)
+          .is('prayer_group_id', null)
+      }
+    }
+  }
 
   revalidatePath('/directory')
   revalidatePath('/admin')

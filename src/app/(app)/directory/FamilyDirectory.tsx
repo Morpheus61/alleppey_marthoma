@@ -52,6 +52,129 @@ function waUrl(phone: string): string {
   return `https://wa.me/${e164}`
 }
 
+function FamilyCard({
+  f,
+  isAdmin,
+  isOpen,
+  onToggle,
+}: {
+  f: FamilyEntry
+  isAdmin: boolean
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  const head   = f.members.find(m => m.relation === 'head')
+  const spouse = f.members.find(m => m.relation === 'spouse')
+  const sorted = [...f.members].sort((a, b) =>
+    (RELATION_ORDER[a.relation ?? 'other'] ?? 10) -
+    (RELATION_ORDER[b.relation ?? 'other'] ?? 10)
+  )
+
+  return (
+    <div className="rounded-2xl border border-amber-100 bg-white shadow-sm overflow-hidden">
+      {/* ── Card header — always visible ── */}
+      <button
+        onClick={onToggle}
+        className="w-full text-left px-4 py-3.5 hover:bg-amber-50/60 transition-colors"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center shrink-0 mt-0.5">
+            <Home size={17} className="text-brand-900" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <span className="font-bold text-brand-900 text-sm">{f.house_name}</span>
+              {f.house_name_ml && (
+                <span className="font-malayalam text-xs text-muted-foreground" lang="ml">
+                  {f.house_name_ml}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {f.bhagam_name_ml
+                ? <><span className="font-malayalam" lang="ml">{f.bhagam_name_ml}</span> — {f.bhagam_name}</>
+                : f.bhagam_name}
+            </p>
+            {!isOpen && f.members.length > 0 && (
+              <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">
+                {sorted.map(m => m.full_name).join(' · ')}
+              </p>
+            )}
+          </div>
+          <div className="shrink-0 text-muted-foreground mt-2">
+            {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </div>
+        </div>
+      </button>
+
+      {/* ── Expanded details ── */}
+      {isOpen && (
+        <div className="border-t border-amber-50 divide-y divide-amber-50">
+          {((isAdmin && f.address) || f.wedding_date) && (
+            <div className="px-4 py-3 grid sm:grid-cols-2 gap-3">
+              {isAdmin && f.address && (
+                <div>
+                  <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">Address</p>
+                  <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">{f.address}</p>
+                </div>
+              )}
+              {f.wedding_date && (
+                <div>
+                  <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">Wedding Anniversary</p>
+                  <p className="text-xs text-gray-700">{fmtAnniv(f.wedding_date)}</p>
+                  {head && spouse && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {head.full_name} &amp; {spouse.full_name}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="px-4 py-3">
+            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-2">
+              Family Members ({f.members.length})
+            </p>
+            <div className="space-y-2.5">
+              {sorted.map(m => (
+                <div key={m.id} className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-brand-50 border border-amber-100 flex items-center justify-center shrink-0 text-brand-900 font-bold text-xs mt-0.5">
+                    {(m.full_name?.[0] ?? '?').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold leading-tight">{m.full_name}</p>
+                    {m.full_name_ml && (
+                      <p className="text-xs font-malayalam text-muted-foreground leading-tight" lang="ml">{m.full_name_ml}</p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <span className="capitalize font-medium">{m.relation ?? 'Member'}</span>
+                      {m.date_of_birth && <> · <span>b. {fmtDate(m.date_of_birth)}</span></>}
+                      {m.gender && <> · <span className="capitalize">{m.gender}</span></>}
+                    </p>
+                    {isAdmin && m.phone && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                        <span>📱 {m.phone}</span>
+                        <a href={waUrl(m.phone)} onClick={e => e.stopPropagation()}
+                          target="_blank" rel="noreferrer" className="text-green-600 hover:underline font-medium">
+                          WhatsApp
+                        </a>
+                      </p>
+                    )}
+                    {isAdmin && m.email && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">✉ {m.email}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function FamilyDirectory({
   families, isAdmin,
 }: {
@@ -75,6 +198,20 @@ export default function FamilyDirectory({
           (m.full_name_ml ?? '').includes(query.trim())
         )
       )
+
+  // When not searching, group families by bhagam for section headers
+  const groupedByBhagam: { bhagam_name: string; bhagam_name_ml: string | null; families: FamilyEntry[] }[] = []
+  if (q.length < 2) {
+    const seen = new Map<string, number>()
+    for (const f of filtered) {
+      const key = f.bhagam_name
+      if (!seen.has(key)) {
+        seen.set(key, groupedByBhagam.length)
+        groupedByBhagam.push({ bhagam_name: f.bhagam_name, bhagam_name_ml: f.bhagam_name_ml, families: [] })
+      }
+      groupedByBhagam[seen.get(key)!].families.push(f)
+    }
+  }
 
   function toggle(id: string) {
     setExpanded(prev => {
@@ -102,146 +239,36 @@ export default function FamilyDirectory({
         {q.length >= 2 ? ` matching "${query.trim()}"` : ''}
       </p>
 
-      {filtered.map(f => {
-        const isOpen = expanded.has(f.family_id)
-        const head   = f.members.find(m => m.relation === 'head')
-        const spouse = f.members.find(m => m.relation === 'spouse')
-        const sorted = [...f.members].sort((a, b) =>
-          (RELATION_ORDER[a.relation ?? 'other'] ?? 10) -
-          (RELATION_ORDER[b.relation ?? 'other'] ?? 10)
-        )
-
-        return (
-          <div key={f.family_id}
-            className="rounded-2xl border border-amber-100 bg-white shadow-sm overflow-hidden">
-
-            {/* ── Card header — always visible ── */}
-            <button
-              onClick={() => toggle(f.family_id)}
-              className="w-full text-left px-4 py-3.5 hover:bg-amber-50/60 transition-colors"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <Home size={17} className="text-brand-900" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-bold text-brand-900 text-sm">{f.house_name}</span>
-                    {f.house_name_ml && (
-                      <span className="font-malayalam text-xs text-muted-foreground" lang="ml">
-                        {f.house_name_ml}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-amber-700 mt-0.5">
-                    {f.bhagam_name_ml
-                      ? <><span className="font-malayalam" lang="ml">{f.bhagam_name_ml}</span> — {f.bhagam_name}</>
-                      : f.bhagam_name}
+      {/* ── Grouped by Bhagam (when not searching) ── */}
+      {q.length < 2 ? (
+        groupedByBhagam.map(group => (
+          <div key={group.bhagam_name} className="space-y-3">
+            {/* Bhagam section header */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="h-px flex-1 bg-amber-200" />
+              <div className="text-center">
+                {group.bhagam_name_ml && (
+                  <p className="font-malayalam text-sm font-semibold text-amber-800" lang="ml">
+                    {group.bhagam_name_ml}
                   </p>
-                  {/* Member names preview when collapsed */}
-                  {!isOpen && f.members.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">
-                      {sorted.map(m => m.full_name).join(' · ')}
-                    </p>
-                  )}
-                </div>
-                <div className="shrink-0 text-muted-foreground mt-2">
-                  {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-              </div>
-            </button>
-
-            {/* ── Expanded details ── */}
-            {isOpen && (
-              <div className="border-t border-amber-50 divide-y divide-amber-50">
-
-                {/* Address + Anniversary row */}
-                {/* TRIAL: address hidden from non-admins (revert: remove isAdmin guard) */}
-                {((isAdmin && f.address) || f.wedding_date) && (
-                  <div className="px-4 py-3 grid sm:grid-cols-2 gap-3">
-                    {isAdmin && f.address && (
-                      <div>
-                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">
-                          Address
-                        </p>
-                        <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">
-                          {f.address}
-                        </p>
-                      </div>
-                    )}
-                    {f.wedding_date && (
-                      <div>
-                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-1">
-                          Wedding Anniversary
-                        </p>
-                        <p className="text-xs text-gray-700">
-                          {fmtAnniv(f.wedding_date)}
-                        </p>
-                        {head && spouse && (
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {head.full_name} &amp; {spouse.full_name}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 )}
-
-                {/* Members list */}
-                <div className="px-4 py-3">
-                  <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-2">
-                    Family Members ({f.members.length})
-                  </p>
-                  <div className="space-y-2.5">
-                    {sorted.map(m => (
-                      <div key={m.id} className="flex items-start gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-brand-50 border border-amber-100 flex items-center justify-center shrink-0 text-brand-900 font-bold text-xs mt-0.5">
-                          {(m.full_name?.[0] ?? '?').toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold leading-tight">{m.full_name}</p>
-                          {m.full_name_ml && (
-                            <p className="text-xs font-malayalam text-muted-foreground leading-tight" lang="ml">
-                              {m.full_name_ml}
-                            </p>
-                          )}
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            <span className="capitalize font-medium">{m.relation ?? 'Member'}</span>
-                            {m.date_of_birth && (
-                              <> · <span>b. {fmtDate(m.date_of_birth)}</span></>
-                            )}
-                            {m.gender && (
-                              <> · <span className="capitalize">{m.gender}</span></>
-                            )}
-                          </p>
-                          {/* Phone — show for all if present; email for admin only */}
-                          {/* TRIAL: phone hidden from non-admins (revert: remove isAdmin guard) */}
-                          {isAdmin && m.phone && (
-                            <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                              <span>📱 {m.phone}</span>
-                              <a
-                                href={waUrl(m.phone)}
-                                onClick={e => e.stopPropagation()}
-                                target="_blank" rel="noreferrer"
-                                className="text-green-600 hover:underline font-medium"
-                              >WhatsApp</a>
-                            </p>
-                          )}
-                          {isAdmin && m.email && (
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                              ✉ {m.email}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
+                  {group.bhagam_name}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {group.families.length} {group.families.length === 1 ? 'family' : 'families'}
+                </p>
               </div>
-            )}
+              <div className="h-px flex-1 bg-amber-200" />
+            </div>
+
+            {/* Families in this bhagam */}
+            {group.families.map(f => <FamilyCard key={f.family_id} f={f} isAdmin={isAdmin} isOpen={expanded.has(f.family_id)} onToggle={() => toggle(f.family_id)} />)}
           </div>
-        )
-      })}
+        ))
+      ) : (
+        filtered.map(f => <FamilyCard key={f.family_id} f={f} isAdmin={isAdmin} isOpen={expanded.has(f.family_id)} onToggle={() => toggle(f.family_id)} />)
+      )}
 
       {filtered.length === 0 && (
         <p className="text-center text-sm text-muted-foreground py-10">

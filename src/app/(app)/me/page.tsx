@@ -4,7 +4,8 @@ import Link from 'next/link'
 import type { Profile, GroupMembership, Group } from '@/types/database'
 import ProfileCard from '@/components/directory/ProfileCard'
 import FamilyMembersSection, { type FamilyMemberRow } from './FamilyMembersSection'
-import { updateMyProfile, updateMyPhoto } from './actions'
+import { updateMyProfile, updateMyPhoto, setNotifyPulpit, requestProfileCorrection } from './actions'
+import NotifyPulpitToggle from './NotifyPulpitToggle'
 
 export const metadata = { title: 'My Profile' }
 
@@ -110,7 +111,25 @@ export default async function ProfilePage() {
         profile={profile}
         action={updateMyProfile}
         onPhotoUpload={updateMyPhoto}
+        requestCorrectionAction={requestProfileCorrection}
       />
+
+      {/* Notification Preferences */}
+      <section>
+        <h2 className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">Notifications</h2>
+        <div className="bg-white rounded-xl border border-amber-100 shadow-sm px-4 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-brand-900">Vicar&apos;s Daily Message</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Notify me when the Vicar posts a new message on the Pulpit.
+            </p>
+          </div>
+          <NotifyPulpitToggle
+            initialValue={profile.notify_pulpit_messages ?? false}
+            action={setNotifyPulpit}
+          />
+        </div>
+      </section>
 
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
-import { addFamilyMember, linkProfileToMember, addMembersToGroup, updateHouseholdPrayerGroup, setMemberGroupMemberships, unlinkProfileFromMember, addLifeEvent } from '../actions'
+import { addFamilyMember, linkProfileToMember, addMembersToGroup, updateHouseholdPrayerGroup, setMemberGroupMemberships, unlinkProfileFromMember, addLifeEvent, requestRegistryCorrection } from '../actions'
 
 async function transliterate(text: string): Promise<string> {
   if (!text.trim()) return ''
@@ -411,5 +411,111 @@ export function GroupEnrollSection({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * HouseholdCorrectionForm
+ * Shown to office staff (admin, not super_admin) instead of direct editing.
+ * Submits a change_request that the Vicar (super_admin) reviews via /admin/approvals.
+ */
+export function HouseholdCorrectionForm({
+  familyId,
+  currentHouseName,
+  currentHouseNameMl,
+  currentAddress,
+  currentPrayerGroupId,
+  prayerGroups,
+}: {
+  familyId: string
+  currentHouseName: string
+  currentHouseNameMl: string | null
+  currentAddress: string | null
+  currentPrayerGroupId: string | null
+  prayerGroups: { id: string; name: string; name_ml: string | null }[]
+}) {
+  const [open, setOpen]       = useState(false)
+  const [saving, setSaving]   = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+  const [done, setDone]       = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setSaving(true); setError(null)
+    const fd = new FormData(e.currentTarget)
+    const currentData = {
+      house_name:       currentHouseName,
+      house_name_ml:    currentHouseNameMl,
+      address:          currentAddress,
+      prayer_group_id:  currentPrayerGroupId,
+    }
+    const result = await requestRegistryCorrection('family_units', familyId, currentData, fd)
+    setSaving(false)
+    if ('error' in result) { setError(result.error); return }
+    setOpen(false)
+    setDone(true)
+  }
+
+  return (
+    <section className="bg-amber-50 rounded-xl border border-amber-200 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">Request Household Correction</p>
+        {open && (
+          <button onClick={() => { setOpen(false); setError(null) }}
+            className="text-xs text-muted-foreground hover:text-foreground">✕ Cancel</button>
+        )}
+      </div>
+
+      {done && (
+        <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+          Correction request submitted. The Vicar will review it in Approvals.
+        </p>
+      )}
+
+      {!open && !done && (
+        <div>
+          <p className="text-[11px] text-amber-700 mb-2">
+            As office staff, corrections to household name, address, or Bhagam must be approved by the Vicar.
+          </p>
+          <button onClick={() => setOpen(true)}
+            className="text-xs font-semibold bg-amber-700 text-white rounded-lg px-4 py-2 hover:bg-amber-800 transition-colors">
+            Submit Correction Request
+          </button>
+        </div>
+      )}
+
+      {open && (
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">House Name (English)</label>
+            <input name="house_name" defaultValue={currentHouseName} required
+              className={inp} />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">House Name (Malayalam)</label>
+            <input name="house_name_ml" defaultValue={currentHouseNameMl ?? ''} className={inp + ' font-malayalam'} />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Address</label>
+            <textarea name="address" defaultValue={currentAddress ?? ''} rows={2}
+              className={inp + ' resize-none'} />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">Bhagam / Prayer Group</label>
+            <select name="prayer_group_id" defaultValue={currentPrayerGroupId ?? ''} className={inp}>
+              <option value="">— No change / Select —</option>
+              {prayerGroups.map(g => (
+                <option key={g.id} value={g.id}>{g.name_ml ? `${g.name_ml} — ` : ''}{g.name}</option>
+              ))}
+            </select>
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button type="submit" disabled={saving}
+            className="w-full rounded-xl bg-amber-700 text-white text-xs font-semibold py-2.5 hover:bg-amber-800 disabled:opacity-50 transition-colors">
+            {saving ? 'Submitting…' : 'Submit for Vicar Approval'}
+          </button>
+        </form>
+      )}
+    </section>
   )
 }

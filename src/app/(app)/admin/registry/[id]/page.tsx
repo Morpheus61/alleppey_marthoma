@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { AddMemberForm, LinkProfileButton, GroupEnrollSection, UnlinkButton, MemberLifeEvents } from './FamilyComponents'
+import { AddMemberForm, LinkProfileButton, GroupEnrollSection, UnlinkButton, MemberLifeEvents, HouseholdCorrectionForm } from './FamilyComponents'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -12,9 +12,11 @@ export default async function HouseholdDetailPage({ params }: Props) {
   if (!user) redirect('/auth/login')
 
   const { data: profileData } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  const { data: roleRow } = await supabase.from('parish_roles')
-    .select('id').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null).maybeSingle()
-  if (!profileData?.is_admin && !roleRow) redirect('/admin')
+  const { data: roleRows } = await supabase.from('parish_roles')
+    .select('role').eq('profile_id', user.id).in('role', ['admin','super_admin']).is('revoked_at', null)
+  const roles = (roleRows ?? []).map((r: { role: string }) => r.role)
+  const isSuperAdmin = roles.includes('super_admin')
+  if (!profileData?.is_admin && roles.length === 0) redirect('/admin')
 
   const { data: family } = await supabase
     .from('family_units')
@@ -197,6 +199,18 @@ export default async function HouseholdDetailPage({ params }: Props) {
         prayerGroups={prayerGroups}
         currentMemberships={currentMemberships ?? []}
       />
+
+      {/* ── Household correction request (office staff → Vicar approval) ── */}
+      {!isSuperAdmin && (
+        <HouseholdCorrectionForm
+          familyId={id}
+          currentHouseName={family.house_name}
+          currentHouseNameMl={family.house_name_ml ?? null}
+          currentAddress={family.address ?? null}
+          currentPrayerGroupId={(family as { prayer_group_id?: string | null }).prayer_group_id ?? null}
+          prayerGroups={prayerGroups}
+        />
+      )}
     </div>
   )
 }
