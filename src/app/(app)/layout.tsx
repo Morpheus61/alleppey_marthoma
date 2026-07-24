@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
 import BottomNav from '@/components/layout/BottomNav'
 import InstallPrompt from '@/components/layout/InstallPrompt'
 import HeaderNav from '@/components/layout/HeaderNav'
@@ -12,13 +11,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
-
-  // Language picker: redirect new users on first login if they haven't chosen a language yet
-  const cookieStore = await cookies()
-  const langPicked = cookieStore.get('lang_picked')?.value
-  if (!langPicked) {
-    redirect('/setup/language')
-  }
 
   const { data } = await supabase
     .from('profiles')
